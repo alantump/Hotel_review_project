@@ -1,2 +1,2 @@
-# Hotel_review_project
+# Hotel Review project
 Project to analyse Hotel Review
