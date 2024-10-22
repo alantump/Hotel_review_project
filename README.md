@@ -1,2 +1,2 @@
 # Hotel Review project
-Project to analyse Hotel Review
+Project to analyse Hotel Reviews
