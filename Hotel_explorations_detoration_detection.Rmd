@@ -210,6 +210,31 @@ server <- function(input, output) {
 shinyApp(ui = ui, server = server)
 
 ```
+
+# Bayesian
+
+
+
+```{r}
+
+random_effects <- ranef(fit)
+random_effects_df <- as.data.frame(random_effects$Hotel_Name)
+random_effects_df$Hotel_Name <- rownames(random_effects$Hotel_Name)
+
+# Extract standard deviations
+std_devs <- as.data.frame(VarCorr(fit)$Hotel_Name)
+# Reorder by random slopes
+random_effects_df = random_effects_df[order(random_effects_df$date_object),] 
+
+ggplot(random_effects_df, aes(x = Hotel_Name)) +
+  geom_point(aes(y = date_object), color = "red") +
+  geom_errorbar(aes(ymin = date_object - 1.96 * 0.0000496, 
+                    ymax = date_object + 1.96 * 0.0000496), 
+                width = 0.2, color = "red") +
+  labs(title = "Random Effects for Hotels",
+       x = "Hotel Name",
+       y = "Random Effects") 
+```
 # Deteroation detection
 
 ```{r}
@@ -262,20 +287,77 @@ confusionMatrix(as.factor(round(predictions)), as.factor(testData$target))
 library(dlm)
 
 
-# Define the observation equation (same as before)
-obs <- dlmModPoly(order = 1, van = TRUE, names = c("intercept", "date_object"))
+buildModel <- function(parm) {
+  dlmModPoly(order = 2, dV = exp(parm[1]), dW = exp(parm[2:3]))
+}
 
-# Define the state equation (hierarchical random walk)
-state <- dlmModHier(dlmModRW(), n = length(unique(train_data$Hotel_Name)))
 
-# Combine the observation and state equations
-model <- dlmMod(obs, state)
+fit <- dlmMLE(detection_data$Reviewer_Score, parm = c(0, 0,0), build = buildModel)
 
-# Fit the model
-fit <- dlmFilter(train_data$Reviewer_Score, model, covariates = train_data$date_object, partition = train_data$Hotel_Name)
+model <- buildModel(fit$par)
 
-# Obtain smoothed estimates
-smooth <- dlmSmooth(fit)
+filtered <- dlmFilter(detection_data$Reviewer_Score, model)
+smoothed <- dlmSmooth(filtered)
+
+
+#cbind(detection_data,s=dropFirst(smoothed$s)) %>% ggplot(aes(x=date_object, y = Reviewer_Score)) + geom_point() +geom_smooth() +
+#  geom_point(aes(x=date_object, y = s), color="red")
+
+
+```
+
+
+```{r}
+errors = detection_data %>% group_by(Hotel_Name) %>% summarise(h0_error = mean(Reviewer_Score-Average_Score), model_error = mean(Reviewer_Score-pred))
+
+
+test_data = test_data %>% mutate(Reviewer_Score2 = NA)
+detection_data = detection_data %>% mutate(Reviewer_Score2 = Reviewer_Score)
+
+plot_data = cbind(detection_data,s=dropFirst(smoothed$s[,2])) 
+#plot_data = cbind(detection_data,s=(filtered$y)) 
+
+library(shiny)
+library(DT)
+
+hotel_names <- unique(plot_data$Hotel_Name)
+
+# Define UI
+ui <- fluidPage(
+  mainPanel(
+    selectInput("hotel", "Select Hotel:", choices = hotel_names),
+    plotOutput("distPlot")
+  )
+)
+
+# Define server logic
+server <- function(input, output) {
+  output$distPlot <- renderPlot({
+    selected_hotel <- input$hotel
+    
+    # Filter data for the selected hotel
+    filtered_data <- plot_data %>% filter(Hotel_Name == selected_hotel)
+    
+    
+    # Plot
+    ggplot(filtered_data, aes(x = date_object, y = s, color = Hotel_Name)) +
+      geom_line() +
+      geom_line(aes(y = Average_Score), color = "gray") +
+      geom_point(aes(x = date_object, y = Reviewer_Score2), alpha = 0.5) +
+      geom_smooth(aes(x = date_object, y = Reviewer_Score2), lty = "dashed") +
+      labs(title = "Predicted Reviewer Scores Over Time",
+           x = "Date",
+           y = "Predicted Reviewer Score") +
+      ylim(6, 10) +
+      theme_minimal() + 
+      theme(legend.position = c(0.5, 0.9))
+  })
+}
+
+
+
+shinyApp(ui = ui, server = server)
+
 ```
 
 
