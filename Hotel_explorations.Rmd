@@ -1,0 +1,263 @@
+---
+title: "Hotel_exploration"
+author: "Alan"
+date: "2024-10-19"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(brms)
+library(ggplot2)
+library(lme4)
+library(lubridate)
+library(stringr)
+
+
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+Hotel_Reviews <- readr::read_csv("C:/Users/alan_/Downloads/Hotel_Reviews.csv", quote =",")
+
+
+countries <- readr::read_csv("C:/Users/alan_/Downloads/countries.csv", quote ="\"")
+
+Hotel_Reviews$Country = NA
+for (i in countries$name){
+  Hotel_Reviews$Country[str_detect(Hotel_Reviews$Hotel_Address, i)] = i
+  }
+  
+
+summary(Hotel_Reviews)
+
+Hotel_Reviews <- Hotel_Reviews %>% mutate(time = as.numeric(as.POSIXct(Review_Date,format="%m/%d/%Y") ))
+date_object <- as.Date(Hotel_Reviews$Review_Date, format = "%m/%d/%Y")
+months <- month(date_object)
+Hotel_Reviews$date_object = date_object
+Hotel_Reviews$month = months
+Hotel_Reviews$num_date_object = as.numeric(date_object)/365
+
+
+# Filter hotels with at least 500 reviews
+Hotel_Reviews <- Hotel_Reviews %>%
+  group_by(Hotel_Name) %>%
+  filter(n() >= 500) %>%
+  ungroup()
+
+```
+
+## Simple
+
+
+```{r pressure}
+
+ 
+ period = 12
+ fit = lm(
+   Reviewer_Score ~ date_object + Country + Country:sin( 2 * pi * (1 / period) * month) + Country:cos(2 * pi * (1 / period) * month),
+   data = Hotel_Reviews)
+ 
+
+ 
+ 
+ # Create a new data frame for predictions
+ new_data <- Hotel_Reviews %>%
+   dplyr::select(Country, month, date_object) %>%
+   distinct()
+ # Add predictions to the new data frame
+ predictions <- predict(fit, newdata = new_data, interval = "confidence")
+ new_data <- cbind(new_data, predictions)
+ 
+ # Plot predictions over time with confidence intervals
+ ggplot(new_data, aes(x = date_object, y = fit, color = Country)) +
+   geom_line() +
+   geom_ribbon(aes(ymin = lwr, ymax = upr, fill = Country), alpha = 0.2) +
+   labs(title = "Predicted Reviewer Scores Over Time with Confidence Intervals",
+        x = "Date",
+        y = "Predicted Reviewer Score") +
+   theme_minimal()
+ 
+ 
+ # Plot predictions for each month with confidence intervals
+ new_data %>% group_by(Country,month) %>% summarise(fit = mean(fit), lwr=mean(lwr), upr = mean(upr)) %>% ggplot(aes(x = (month), y = fit, color = Country)) +
+   geom_line() +
+   geom_ribbon(aes(ymin = lwr, ymax = upr, fill = Country), alpha = 0.2) +
+   labs(title = "Predicted Reviewer Scores for Each Month with Confidence Intervals",
+        x = "Month",
+        y = "Predicted Reviewer Score") +
+   theme_minimal()
+ 
+ 
+
+```
+# Hierarchical
+
+```{r}
+fit2 = lmer(
+   Reviewer_Score ~ 0 + date_object + Country + Country:sin( 2 * pi * (1 / period) * month) + Country:cos(2 * pi * (1 / period) * month) + (1 + date_object | Hotel_Name),
+   data = Hotel_Reviews)
+# summary(fit2)
+ 
+ 
+mse1 <- mean((Hotel_Reviews$Reviewer_Score - predict(fit2, newdata = Hotel_Reviews))^2)
+
+ fit3 = lmer(
+   Reviewer_Score ~ 0 + date_object + Country  + (1 + date_object | Hotel_Name),
+   data = Hotel_Reviews)
+ mse2 <- mean((Hotel_Reviews$Reviewer_Score - predict(fit3, newdata = Hotel_Reviews))^2)
+print(mse1)
+print(mse2)
+```
+
+
+```{r}
+fit4 = lmer(
+   Reviewer_Score ~ 0 + date_object + Country + Country:sin( 2 * pi * (1 / period) * month) + Country:cos(2 * pi * (1 / period) * month) + (1 + date_object + sin( 2 * pi * (1 / period) * month) + cos(2 * pi * (1 / period) * month) | Hotel_Name),
+   data = Hotel_Reviews)
+ mse3 <- mean((Hotel_Reviews$Reviewer_Score - predict(fit4, newdata = Hotel_Reviews))^2)
+
+print(mse3)
+ 
+```
+```{r}
+Hotel_Reviews = Hotel_Reviews %>% mutate(Reviewer_Score2 = log(abs(11-Reviewer_Score)))
+Hotel_Reviews = Hotel_Reviews %>% mutate(Reviewer_Score3 = 10-Reviewer_Score)
+fit4 = glmer(
+   Reviewer_Score3 ~ date_object   + (1 | Hotel_Name),
+   data = Hotel_Reviews,family=poisson )
+ mse3 <- mean((Hotel_Reviews$Reviewer_Score2 - predict(fit4, newdata = Hotel_Reviews))^2)
+
+print(mse3)
+
+
+plot(lm(
+   Reviewer_Score ~ date_object,
+   data = Hotel_Reviews ))
+
+plot(fit4)
+
+
+
+
+
+```
+
+
+```{r}
+library(ordinal)
+
+
+Hotel_Reviews = Hotel_Reviews %>% mutate(Reviewer_Score_fac = factor(round(Reviewer_Score)-1, ordered = TRUE))
+Hotel_Reviews$Reviewer_Score_fac <- as.factor(Hotel_Reviews$Reviewer_Score_fac)
+Hotel_Reviews$Hotel_Name <- as.factor(Hotel_Reviews$Hotel_Name)
+Hotel_Reviews$date_object <- as.Date(Hotel_Reviews$date_object) # or as.numeric if appropriate
+
+fit_ordinal <- clmm (
+   Reviewer_Score_fac ~ date_object , data= Hotel_Reviews, Hess=T)
+
+fit_ordinal <- brm(
+  formula = Reviewer_Score_fac ~ date_object + (1 | Hotel_Name),
+  data = Hotel_Reviews,
+  family = cumulative(link = "logit"), cores= 4 # Specify the cumulative link for ordinal data
+)
+
+# View the summary of the model
+summary(fit_ordinal)
+
+
+ new_data <- Hotel_Reviews %>%
+   dplyr::select(Country, month, date_object,Hotel_Name,Reviewer_Score)# %>% filter(Hotel_Name %in% sample(unique(Hotel_Reviews$Hotel_Name),10))
+ predictions <- as.numeric(predict(fit_ordinal, newdata = new_data, type="p"))+1
+ new_data <- cbind(new_data, predictions)
+
+
+ ggplot(new_data, aes(x = month, y = predictions)) +
+   geom_line() +
+   #geom_ribbon(aes(ymin = lwr, ymax = upr, fill = Hotel_Name), alpha = 0.2) +
+   geom_point(aes(x = month, y = Reviewer_Score),alpha = 0.01) +
+   geom_smooth(aes(x = month, y = Reviewer_Score),lty="dashed") +
+   labs(title = "Predicted Reviewer Scores Over Time",
+        x = "Date",
+        y = "Predicted Reviewer Score") +
+   ylim(7,10) +
+   theme_minimal() #+ 
+   #geom_hline(aes(yintercept = avg_score, color = Hotel_Name), linetype = "dashed") 
+ 
+
+```
+
+```{r}
+
+ new_data <- Hotel_Reviews %>%
+   dplyr::select(Country, month, date_object,Hotel_Name,Reviewer_Score) %>% filter(Hotel_Name %in% sample(unique(Hotel_Reviews$Hotel_Name),10))
+ predictions <- predict(fit_ordinal, newdata = new_data)
+ new_data <- cbind(new_data, predictions)
+ 
+ # Calculate the average Reviewer_Score for each hotel
+ average_scores <- Hotel_Reviews %>%
+   group_by(Hotel_Name) %>%
+   summarize(avg_score = mean(Reviewer_Score, na.rm = TRUE))
+ # Merge the average scores with your new_data
+ new_data <- new_data %>%
+   left_join(average_scores, by = "Hotel_Name")
+ 
+ ggplot(new_data, aes(x = month, y = predictions, color = Hotel_Name)) +
+   geom_line() +
+   #geom_ribbon(aes(ymin = lwr, ymax = upr, fill = Hotel_Name), alpha = 0.2) +
+   geom_point(aes(x = month, y = Reviewer_Score),alpha = 0.01) +
+   geom_smooth(aes(x = month, y = Reviewer_Score),lty="dashed") +
+   labs(title = "Predicted Reviewer Scores Over Time",
+        x = "Date",
+        y = "Predicted Reviewer Score") +
+   ylim(7,10) +
+   theme_minimal() #+ 
+   #geom_hline(aes(yintercept = avg_score, color = Hotel_Name), linetype = "dashed") 
+ 
+ 
+ 
+   
+ 
+```
+
+```{r}
+
+ 
+ new_data <- Hotel_Reviews %>%
+   dplyr::select(Country, month, date_object,Hotel_Name) %>% filter(Hotel_Name %in% sample(unique(Hotel_Reviews$Hotel_Name),10))
+ #predictions <- predict(fit2, newdata = new_data,)
+ 
+ library(merTools)
+ 
+ pred_ints  = predictInterval(fit2, newdata=new_data, n.sims=1000 , returnSims = T, level =0.1)
+ 
+ new_data <- cbind(new_data, pred_ints)
+ 
+ 
+
+
+ 
+ # Calculate the average Reviewer_Score for each hotel
+ average_scores <- Hotel_Reviews %>%
+   group_by(Hotel_Name) %>%
+   summarize(avg_score = mean(Reviewer_Score, na.rm = TRUE),n=length(Hotel_Name))
+ # Merge the average scores with your new_data
+ new_data <- new_data %>%
+   left_join(average_scores, by = "Hotel_Name")
+ 
+ ggplot(new_data, aes(x = date_object, y = fit, color = Hotel_Name)) +
+   geom_line() +
+  geom_ribbon(aes(ymin = lwr, ymax = upr, fill = "gray"), alpha = 0.1) +
+   labs(title = "Predicted Reviewer Scores Over Time with Confidence Intervals",
+        x = "Date",
+        y = "Predicted Reviewer Score") +
+   theme_minimal() + 
+   geom_hline(aes(yintercept = avg_score, color = Hotel_Name), linetype = "dashed") 
+   
+```
+
