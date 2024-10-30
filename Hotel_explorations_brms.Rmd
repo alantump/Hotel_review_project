@@ -150,6 +150,10 @@ prior <- c(
  
 
  
+ fit = brm(bf(
+   Reviewer_Score ~ 0 +  Hotel_Name+ time_ref:Hotel_Name),
+   data = detection_data, cores = 4, chains = 4,  backend = "cmdstanr", threads = threading(4), file = "fit_non_h")
+ 
 
 ```
 
