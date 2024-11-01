@@ -207,6 +207,11 @@ rmse_ho = sqrt(mean((mean(Hotel_Reviews$Average_Score[Hotel_Reviews$time_ref<0])
 ame_ho = (mean(abs(mean(Hotel_Reviews$Average_Score[Hotel_Reviews$time_ref<0]) - test_data$Reviewer_Score)))
 cat(paste0("\nPrediction:\nAbsolute error: ", ame, " vs. H0- ",ame_ho,
              "\nRMSE: ",rmse, "vs. H0- ",rmse_ho))
+
+
+#H - Absolute error: 1.27558651172076 vs. H0- 1.39333515816055
+#non-h Absolute error: 1.27801796184937 vs. H0- 1.39333515816055
+
 ```
 ```{r}
 
