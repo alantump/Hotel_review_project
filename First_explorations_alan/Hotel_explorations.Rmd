@@ -12,36 +12,18 @@ library(ggplot2)
 library(lme4)
 library(lubridate)
 library(stringr)
-
+library(cowplot)
 
 ```
 
 ## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
 ```{r cars}
-Hotel_Reviews <- readr::read_csv("C:/Users/alan_/Downloads/Hotel_Reviews.csv", quote =",")
+shiny_t = F #load shiny stuff?
+source("functions.R")
 
-
-countries <- readr::read_csv("C:/Users/alan_/Downloads/countries.csv", quote ="\"")
-
-Hotel_Reviews$Country = NA
-for (i in countries$name){
-  Hotel_Reviews$Country[str_detect(Hotel_Reviews$Hotel_Address, i)] = i
-  }
-  
-
-summary(Hotel_Reviews)
-
-Hotel_Reviews <- Hotel_Reviews %>% mutate(time = as.numeric(as.POSIXct(Review_Date,format="%m/%d/%Y") ))
-date_object <- as.Date(Hotel_Reviews$Review_Date, format = "%m/%d/%Y")
-months <- month(date_object)
-Hotel_Reviews$date_object = date_object
-Hotel_Reviews$month = months
-Hotel_Reviews$num_date_object = as.numeric(date_object)/365
+Hotel_Reviews <- data_loader()
 
 
 # Filter hotels with at least 500 reviews
@@ -50,214 +32,567 @@ Hotel_Reviews <- Hotel_Reviews %>%
   filter(n() >= 500) %>%
   ungroup()
 
+
+```
+Base data
+```{r}
+dim(Hotel_Reviews)
+length(unique(Hotel_Reviews$Hotel_Name))
 ```
 
-## Simple
+
+
+```{r}
+
+
+
+
+trip_time = 31 * 3 #day 
+trip_start = max(Hotel_Reviews$date_object)-trip_time 
+booking_time = trip_start
+attention_window = 356 * 1.5
+
+
+Hotel_Reviews = Hotel_Reviews %>% mutate(time_ref = as.numeric(date_object- booking_time)/30.5)
+
+detection_data = Hotel_Reviews %>% filter(date_object < booking_time &
+                                            date_object > (booking_time-attention_window) )
+
+
+test_data = Hotel_Reviews %>% filter(date_object > trip_start &
+                                            date_object < (trip_start+trip_time) )
+
+
+
+
+
+```
+
+
+
+
 
 
 ```{r pressure}
 
- 
- period = 12
- fit = lm(
-   Reviewer_Score ~ date_object + Country + Country:sin( 2 * pi * (1 / period) * month) + Country:cos(2 * pi * (1 / period) * month),
-   data = Hotel_Reviews)
- 
 
- 
- 
- # Create a new data frame for predictions
- new_data <- Hotel_Reviews %>%
-   dplyr::select(Country, month, date_object) %>%
-   distinct()
- # Add predictions to the new data frame
- predictions <- predict(fit, newdata = new_data, interval = "confidence")
- new_data <- cbind(new_data, predictions)
- 
- # Plot predictions over time with confidence intervals
- ggplot(new_data, aes(x = date_object, y = fit, color = Country)) +
-   geom_line() +
-   geom_ribbon(aes(ymin = lwr, ymax = upr, fill = Country), alpha = 0.2) +
-   labs(title = "Predicted Reviewer Scores Over Time with Confidence Intervals",
-        x = "Date",
-        y = "Predicted Reviewer Score") +
-   theme_minimal()
- 
- 
- # Plot predictions for each month with confidence intervals
- new_data %>% group_by(Country,month) %>% summarise(fit = mean(fit), lwr=mean(lwr), upr = mean(upr)) %>% ggplot(aes(x = (month), y = fit, color = Country)) +
-   geom_line() +
-   geom_ribbon(aes(ymin = lwr, ymax = upr, fill = Country), alpha = 0.2) +
-   labs(title = "Predicted Reviewer Scores for Each Month with Confidence Intervals",
-        x = "Month",
-        y = "Predicted Reviewer Score") +
-   theme_minimal()
- 
- 
-
-```
-# Hierarchical
-
-```{r}
-fit2 = lmer(
-   Reviewer_Score ~ 0 + date_object + Country + Country:sin( 2 * pi * (1 / period) * month) + Country:cos(2 * pi * (1 / period) * month) + (1 + date_object | Hotel_Name),
-   data = Hotel_Reviews)
-# summary(fit2)
- 
- 
-mse1 <- mean((Hotel_Reviews$Reviewer_Score - predict(fit2, newdata = Hotel_Reviews))^2)
-
- fit3 = lmer(
-   Reviewer_Score ~ 0 + date_object + Country  + (1 + date_object | Hotel_Name),
-   data = Hotel_Reviews)
- mse2 <- mean((Hotel_Reviews$Reviewer_Score - predict(fit3, newdata = Hotel_Reviews))^2)
-print(mse1)
-print(mse2)
-```
+#fit = lm(
+#   Reviewer_Score ~ 0 +  Hotel_Name + time_ref:Hotel_Name, data = Hotel_Reviews)
+#save(fit, file = "Simple_lm.RData")
 
 
-```{r}
-fit4 = lmer(
-   Reviewer_Score ~ 0 + date_object + Country + Country:sin( 2 * pi * (1 / period) * month) + Country:cos(2 * pi * (1 / period) * month) + (1 + date_object + sin( 2 * pi * (1 / period) * month) + cos(2 * pi * (1 / period) * month) | Hotel_Name),
-   data = Hotel_Reviews)
- mse3 <- mean((Hotel_Reviews$Reviewer_Score - predict(fit4, newdata = Hotel_Reviews))^2)
-
-print(mse3)
- 
-```
-```{r}
-Hotel_Reviews = Hotel_Reviews %>% mutate(Reviewer_Score2 = log(abs(11-Reviewer_Score)))
-Hotel_Reviews = Hotel_Reviews %>% mutate(Reviewer_Score3 = 10-Reviewer_Score)
-fit4 = glmer(
-   Reviewer_Score3 ~ date_object   + (1 | Hotel_Name),
-   data = Hotel_Reviews,family=poisson )
- mse3 <- mean((Hotel_Reviews$Reviewer_Score2 - predict(fit4, newdata = Hotel_Reviews))^2)
-
-print(mse3)
-
-
-plot(lm(
-   Reviewer_Score ~ date_object,
-   data = Hotel_Reviews ))
-
-plot(fit4)
-
-
-
-
+load(file = "Simple_lm.RData")
 
 ```
 
+```{r}
+
+t_threshold =  qt(0.90,Inf)
+
+ 
+all_coefficients = coef(fit)
+model_summary <- summary(fit)
+
+# Extract the coefficients table
+coefficients_table <- model_summary$coefficients
+
+# Extract only the interaction terms
+interaction_summary <- coefficients_table[grep(":", rownames(coefficients_table)), ]
+
+
+ time_effct = data.frame(interaction_summary) %>% mutate(Name= rownames(.),
+                                                         Name = stringr::str_replace(Name, c("Hotel_Name"),""),
+                                                         Name = stringr::str_replace(Name, c(":time_ref"),"")) %>%
+   arrange(Estimate) %>%
+  mutate(Name = factor(Name, levels = Name)) %>% mutate(Pos = ifelse(t.value>t_threshold, 1, 0),
+                                                        Neg = ifelse(t.value<(-t_threshold), 1, 0),
+                                                        tendency = Pos-Neg) 
+
+ 
+ time_effct %>% ggplot(aes(x=Name, y= Estimate, colour = as.factor(tendency))) + geom_point() +
+   geom_pointrange(aes(ymin = Estimate - (Std..Error*2) ,ymax= Estimate + (Std..Error*2)),alpha=0.2) + 
+   coord_flip() + geom_hline(yintercept = 0) + theme(legend.position = "top") +
+  annotate("text", x = Inf, y = Inf, label = paste("Mean Pos:", round(mean(time_effct$Pos), 2)), hjust = 1.1, vjust = 2, size = 4, color = "blue") +
+  annotate("text", x = Inf, y = Inf, label = paste("Mean Neg:", round(mean(time_effct$Neg), 2)), hjust = 1.1, vjust = 3.5, size = 4, color = "red")
+ 
+ 
+ 
+ 
+ 
+```
+
+
+# Predictive performance
 
 ```{r}
-library(ordinal)
 
 
-Hotel_Reviews = Hotel_Reviews %>% mutate(Reviewer_Score_fac = factor(round(Reviewer_Score)-1, ordered = TRUE))
-Hotel_Reviews$Reviewer_Score_fac <- as.factor(Hotel_Reviews$Reviewer_Score_fac)
-Hotel_Reviews$Hotel_Name <- as.factor(Hotel_Reviews$Hotel_Name)
-Hotel_Reviews$date_object <- as.Date(Hotel_Reviews$date_object) # or as.numeric if appropriate
+detection_data2 = detection_data
+detection_data2$Estimate = predict(fit, newdata = detection_data )
 
-fit_ordinal <- clmm (
-   Reviewer_Score_fac ~ date_object , data= Hotel_Reviews, Hess=T)
 
-fit_ordinal <- brm(
-  formula = Reviewer_Score_fac ~ date_object + (1 | Hotel_Name),
-  data = Hotel_Reviews,
-  family = cumulative(link = "logit"), cores= 4 # Specify the cumulative link for ordinal data
+
+rmse = sqrt(mean((detection_data2$Estimate - detection_data$Reviewer_Score)^2))
+ame = (mean(abs(detection_data2$Estimate - detection_data$Reviewer_Score)))
+cat(paste0("Insample:\nAbsolute error: ", ame,
+             "\nRMSE: ",rmse))
+ 
+
+test_data2 = test_data
+test_data2$Estimate = predict(fit, newdata = test_data)
+
+rmse = sqrt(mean((test_data2$Estimate - test_data$Reviewer_Score)^2))
+ame = (mean(abs(test_data2$Estimate - test_data$Reviewer_Score)))
+rmse_ho = sqrt(mean((mean(Hotel_Reviews$Average_Score[Hotel_Reviews$time_ref<0]) - test_data$Reviewer_Score)^2))
+ame_ho = (mean(abs(mean(Hotel_Reviews$Average_Score[Hotel_Reviews$time_ref<0]) - test_data$Reviewer_Score)))
+cat(paste0("\nPrediction:\nAbsolute error: ", ame, " vs. H0- ",ame_ho,
+             "\nRMSE: ",rmse, "vs. H0- ",rmse_ho))
+
+```
+```{r}
+ past_average <- Hotel_Reviews %>% filter(time_ref<0) %>% group_by(Hotel_Name) %>% summarise(past_average = mean(Reviewer_Score))
+
+grouped_test_data <- test_data2 %>% group_by(Hotel_Name) %>% summarise(mean_review = mean(Reviewer_Score)) %>%
+  left_join(time_effct %>% mutate(Hotel_Name=Name), by = "Hotel_Name") %>%
+    left_join(past_average, by = "Hotel_Name") %>% mutate(correct_neg = past_average>mean_review, correct_pos = past_average<mean_review  )
+
+ grouped_test_data %>% group_by(Neg) %>% summarise(m = mean(correct_neg))
+ grouped_test_data %>% group_by(Pos) %>% summarise(m = mean(correct_pos))
+
+
+
+
+
+proportion_data_neg <- grouped_test_data %>%
+  group_by(Neg, correct_neg) %>%
+  summarise(m = length(Hotel_Name)) %>%
+  ungroup() %>%
+  mutate(proportion = m / sum(m))
+
+
+
+proportion_data_pos <- grouped_test_data %>%
+  group_by(Pos, correct_pos) %>%
+  summarise(m = length(Hotel_Name)) %>%
+  ungroup() %>%
+  mutate(proportion = m / sum(m))
+
+
+# Calculate Recall and F1 Score
+true_positive <- proportion_data_neg %>% filter(Neg == 1, correct_neg == 1) %>% pull(m)
+false_negative <- proportion_data_neg %>% filter(Neg == 0, correct_neg == 1) %>% pull(m)
+false_positive <- proportion_data_neg %>% filter(Neg == 1, correct_neg == 0) %>% pull(m)
+
+recall_neg <- true_positive / (true_positive + false_negative)
+precision_neg <- true_positive / (true_positive + false_positive)
+f1_score_neg <- 2 * (precision * recall) / (precision + recall)
+
+
+# Calculate Recall and F1 Score
+true_positive <- proportion_data_pos %>% filter(Pos == 1, correct_pos == 1) %>% pull(m)
+false_Posative <- proportion_data_pos %>% filter(Pos == 0, correct_pos == 1) %>% pull(m)
+false_positive <- proportion_data_pos %>% filter(Pos == 1, correct_pos == 0) %>% pull(m)
+
+recall_pos <- true_positive / (true_positive + false_negative)
+precision_pos <- true_positive / (true_positive + false_positive)
+f1_score_pos <- 2 * (precision * recall) / (precision + recall)
+
+
+# Plot the proportions as a 2x2 matrix
+plot_grid(ggplot(proportion_data_neg, aes(y = factor(Neg), x = factor(correct_neg), fill = proportion)) +
+  geom_tile() +
+  geom_text(aes(label = round(proportion, 2)), color = "black") +
+  scale_fill_gradient(low = "white", high = "darkred") +
+  theme_minimal() +
+  labs(x = "Reviews being worse than past average", y = "Detoration detection", fill = "Proportion") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  annotate("text", x = 1.5, y = 2.4, label = paste("Recall:", round(recall_neg, 2)), size = 4, color = "black") +
+  annotate("text", x = 1.5, y = 2.3, label = paste("Precision:", round(precision_neg, 2)), size = 4, color = "black") +
+  annotate("text", x = 1.5, y = 2.2, label = paste("F1 Score:", round(f1_score_neg, 2)), size = 4, color = "black"),
+  ggplot(proportion_data_pos, aes(y = factor(Pos), x = factor(correct_pos), fill = proportion)) +
+  geom_tile() +
+  geom_text(aes(label = round(proportion, 2)), color = "black") +
+  scale_fill_gradient(low = "white", high = "darkgreen") +
+  theme_minimal() +
+  labs(x = "Reviews being better than past average", y = "Imporvement detection", fill = "Proportion") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  annotate("text", x = 1.5, y = 2.4, label = paste("Recall:", round(recall_pos, 2)), size = 4, color = "black") +
+  annotate("text", x = 1.5, y = 2.3, label = paste("Precision:", round(precision_pos, 2)), size = 4, color = "black") +
+  annotate("text", x = 1.5, y = 2.2, label = paste("F1 Score:", round(f1_score_pos, 2)), size = 4, color = "black"))
+
+
+```
+
+
+
+```{r}
+
+
+
+# Define UI
+ui <- fluidPage(
+  mainPanel(
+    sliderInput("Sensetivity", "Sensetivity:", min = 0, max=1, step =0.05, value=0.1),
+    plotOutput("distPlot", height = "600px")
+  )
 )
 
-# View the summary of the model
-summary(fit_ordinal)
 
+server <- function(input, output) {
+  output$distPlot <- renderPlot({
+    
+    t_threshold <- qt(1-input$Sensetivity/2,Inf)
+    
 
- new_data <- Hotel_Reviews %>%
-   dplyr::select(Country, month, date_object,Hotel_Name,Reviewer_Score)# %>% filter(Hotel_Name %in% sample(unique(Hotel_Reviews$Hotel_Name),10))
- predictions <- as.numeric(predict(fit_ordinal, newdata = new_data, type="p"))+1
- new_data <- cbind(new_data, predictions)
-
-
- ggplot(new_data, aes(x = month, y = predictions)) +
-   geom_line() +
-   #geom_ribbon(aes(ymin = lwr, ymax = upr, fill = Hotel_Name), alpha = 0.2) +
-   geom_point(aes(x = month, y = Reviewer_Score),alpha = 0.01) +
-   geom_smooth(aes(x = month, y = Reviewer_Score),lty="dashed") +
-   labs(title = "Predicted Reviewer Scores Over Time",
-        x = "Date",
-        y = "Predicted Reviewer Score") +
-   ylim(7,10) +
-   theme_minimal() #+ 
-   #geom_hline(aes(yintercept = avg_score, color = Hotel_Name), linetype = "dashed") 
  
+all_coefficients = coef(fit)
+model_summary <- summary(fit)
+
+# Extract the coefficients table
+coefficients_table <- model_summary$coefficients
+
+# Extract only the interaction terms
+interaction_summary <- coefficients_table[grep(":", rownames(coefficients_table)), ]
+
+
+ time_effct = data.frame(interaction_summary) %>% mutate(Name= rownames(.),
+                                                         Name = stringr::str_replace(Name, c("Hotel_Name"),""),
+                                                         Name = stringr::str_replace(Name, c(":time_ref"),"")) %>%
+   arrange(Estimate) %>%
+  mutate(Name = factor(Name, levels = Name)) %>% mutate(Pos = ifelse(t.value>t_threshold, 1, 0),
+                                                        Neg = ifelse(t.value<(-t_threshold), 1, 0),
+                                                        tendency = Pos-Neg) 
+
+ 
+ p1 = time_effct %>% ggplot(aes(x=Name, y= Estimate, colour = as.factor(tendency))) + geom_point() +
+   geom_pointrange(aes(ymin = Estimate - (Std..Error*2) ,ymax= Estimate + (Std..Error*2)),alpha=0.2) + 
+   coord_flip() + geom_hline(yintercept = 0) + theme(legend.position = "top") +
+  annotate("text", x = Inf, y = Inf, label = paste("Mean Pos:", round(mean(time_effct$Pos), 2)), hjust = 1.1, vjust = 2, size = 4, color = "blue") +
+  annotate("text", x = Inf, y = Inf, label = paste("Mean Neg:", round(mean(time_effct$Neg), 2)), hjust = 1.1, vjust = 3.5, size = 4, color = "red")
+ 
+ past_average <- Hotel_Reviews %>% filter(time_ref<0) %>% group_by(Hotel_Name) %>% summarise(past_average = mean(Reviewer_Score))
+
+grouped_test_data <- test_data2 %>% group_by(Hotel_Name) %>% summarise(mean_review = mean(Reviewer_Score)) %>%
+  left_join(time_effct %>% mutate(Hotel_Name=Name), by = "Hotel_Name") %>%
+    left_join(past_average, by = "Hotel_Name") %>% mutate(correct_neg = past_average>mean_review, correct_pos = past_average<mean_review  )
+
+ grouped_test_data %>% group_by(Neg) %>% summarise(m = mean(correct_neg))
+ grouped_test_data %>% group_by(Pos) %>% summarise(m = mean(correct_pos))
+
+
+
+
+
+proportion_data_neg <- grouped_test_data %>%
+  group_by(Neg, correct_neg) %>%
+  summarise(m = length(Hotel_Name)) %>%
+  ungroup() %>%
+  mutate(proportion = m / sum(m))
+
+
+
+proportion_data_pos <- grouped_test_data %>%
+  group_by(Pos, correct_pos) %>%
+  summarise(m = length(Hotel_Name)) %>%
+  ungroup() %>%
+  mutate(proportion = m / sum(m))
+
+
+# Calculate Recall and F1 Score
+true_positive <- proportion_data_neg %>% filter(Neg == 1, correct_neg == 1) %>% pull(m)
+false_negative <- proportion_data_neg %>% filter(Neg == 0, correct_neg == 1) %>% pull(m)
+false_positive <- proportion_data_neg %>% filter(Neg == 1, correct_neg == 0) %>% pull(m)
+
+recall_neg <- true_positive / (true_positive + false_negative)
+precision_neg <- true_positive / (true_positive + false_positive)
+f1_score_neg <- 2 * (precision_neg * recall_neg) / (precision_neg + recall_neg)
+
+
+# Calculate Recall and F1 Score
+true_positive <- proportion_data_pos %>% filter(Pos == 1, correct_pos == 1) %>% pull(m)
+false_Posative <- proportion_data_pos %>% filter(Pos == 0, correct_pos == 1) %>% pull(m)
+false_positive <- proportion_data_pos %>% filter(Pos == 1, correct_pos == 0) %>% pull(m)
+
+recall_pos <- true_positive / (true_positive + false_negative)
+precision_pos <- true_positive / (true_positive + false_positive)
+f1_score_pos <- 2 * (precision_pos * recall_pos) / (precision_pos + recall_pos)
+
+
+# Plot the proportions as a 2x2 matrix
+plot_grid(p1,plot_grid(ggplot(proportion_data_neg, aes(y = factor(Neg), x = factor(correct_neg), fill = proportion)) +
+  geom_tile() +
+  geom_text(aes(label = round(proportion, 2)), color = "black") +
+  scale_fill_gradient(low = "white", high = "darkred") +
+  theme_minimal() +
+  labs(x = "Reviews being worse than past average", y = "Detoration detection", fill = "Proportion") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  annotate("text", x = 1.5, y = 2.4, label = paste("Recall:", round(recall_neg, 2)), size = 4, color = "black") +
+  annotate("text", x = 1.5, y = 2.3, label = paste("Precision:", round(precision_neg, 2)), size = 4, color = "black") +
+  annotate("text", x = 1.5, y = 2.2, label = paste("F1 Score:", round(f1_score_neg, 2)), size = 4, color = "black"),
+  ggplot(proportion_data_pos, aes(y = factor(Pos), x = factor(correct_pos), fill = proportion)) +
+  geom_tile() +
+  geom_text(aes(label = round(proportion, 2)), color = "black") +
+  scale_fill_gradient(low = "white", high = "darkgreen") +
+  theme_minimal() +
+  labs(x = "Reviews being better than past average", y = "Imporvement detection", fill = "Proportion") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  annotate("text", x = 1.5, y = 2.4, label = paste("Recall:", round(recall_pos, 2)), size = 4, color = "black") +
+  annotate("text", x = 1.5, y = 2.3, label = paste("Precision:", round(precision_pos, 2)), size = 4, color = "black") +
+  annotate("text", x = 1.5, y = 2.2, label = paste("F1 Score:", round(f1_score_pos, 2)), size = 4, color = "black")), ncol=1)
+
+  })
+}
+
+
+ shinyApp(ui = ui, server = server)
+
+ 
+```
+
+
+
+
+```{r}
+
+library(shiny)
+library(DT)
+
+
+test_window = expand.grid(Hotel_Name = unique(test_data$Hotel_Name), time_ref = seq(min(detection_data$time_ref), max(test_data$time_ref),0.2), Reviewer_Score2 =NA)
+#detection_data2 = detection_data2 %>% mutate(Estimate = NA)
+detection_data2 = detection_data2 %>% mutate(Reviewer_Score2 = Reviewer_Score)
+test_window$Estimate = predict(fit, newdata = test_window)
+
+
+plot_data = detection_data2
+
+hotel_names <- unique(plot_data$Hotel_Name)
+```
+
+```{r}
+
+
+
+# Define UI
+ui <- fluidPage(
+  mainPanel(
+    selectInput("hotel", "Select Hotel:", choices = hotel_names),
+    plotOutput("distPlot")
+  )
+)
+
+# Define server logic
+server <- function(input, output) {
+  output$distPlot <- renderPlot({
+    
+    selected_hotel <- input$hotel
+    
+    # Filter data for the selected hotel
+    filtered_data <- plot_data %>% filter(Hotel_Name == selected_hotel)
+    
+    
+    # Check if the selected hotel has Neg == TRUE
+    neg_hotel <- random_effct2 %>% filter(Name == selected_hotel & Neg == TRUE)
+
+    
+    # Plot
+   p =  ggplot(filtered_data, aes(x = time_ref, y = Reviewer_Score2)) +
+      geom_line(aes(y = Average_Score), color = "gray") +
+      geom_point(aes(x = time_ref, y = Reviewer_Score2), alpha = 0.5) +
+      geom_smooth(aes(x = time_ref, y = Reviewer_Score2), lty = "dashed") +
+      geom_line(data= test_window  %>% filter(Hotel_Name == selected_hotel), aes(x=time_ref, y=Estimate)) +
+      labs(title = "Predicted Reviewer Scores Over Time",
+           x = "Date",
+           y = "Predicted Reviewer Score") +
+      coord_cartesian(ylim = c(6, 10)) + 
+      theme_minimal() + 
+      theme(legend.position = c(0.5, 0.9))
+   if(random_effct2$Neg[random_effct2$Name == selected_hotel]==1)p =  p + geom_text(data = neg_hotel, aes(x = max(filtered_data$time_ref), y = 9, label = "!"), size = 10, color = "red", vjust = -1)
+   if(random_effct2$Pos[random_effct2$Name == selected_hotel] ==1) p =  p + geom_text(data = neg_hotel, aes(x = max(filtered_data$time_ref), y = 9, label = "+"), size = 10, color = "green", vjust = -1)
+   plot_grid(p,
+   
+   rbind(test_window  %>% filter(Hotel_Name == selected_hotel, time_ref > 0) %>% group_by(Hotel_Name) %>% summarise(pred = mean(Estimate), type="Prediction"),
+   test_data  %>% filter(Hotel_Name == selected_hotel, time_ref > 0) %>% group_by(Hotel_Name) %>% summarise(pred = mean(Reviewer_Score), type="Vacation average"),
+   Hotel_Reviews  %>% filter(Hotel_Name == selected_hotel, time_ref < 0) %>% group_by(Hotel_Name) %>% summarise(pred = mean(Reviewer_Score), type="Past average")) %>%
+     ggplot(aes(x=type, y=pred)) + geom_bar(stat="identity") +      coord_cartesian(ylim = c(7, 10))  
+   )
+
+
+  })
+}
+
+
+
+shinyApp(ui = ui, server = server)
 
 ```
 
 ```{r}
 
- new_data <- Hotel_Reviews %>%
-   dplyr::select(Country, month, date_object,Hotel_Name,Reviewer_Score) %>% filter(Hotel_Name %in% sample(unique(Hotel_Reviews$Hotel_Name),10))
- predictions <- predict(fit_ordinal, newdata = new_data)
- new_data <- cbind(new_data, predictions)
- 
- # Calculate the average Reviewer_Score for each hotel
- average_scores <- Hotel_Reviews %>%
-   group_by(Hotel_Name) %>%
-   summarize(avg_score = mean(Reviewer_Score, na.rm = TRUE))
- # Merge the average scores with your new_data
- new_data <- new_data %>%
-   left_join(average_scores, by = "Hotel_Name")
- 
- ggplot(new_data, aes(x = month, y = predictions, color = Hotel_Name)) +
-   geom_line() +
-   #geom_ribbon(aes(ymin = lwr, ymax = upr, fill = Hotel_Name), alpha = 0.2) +
-   geom_point(aes(x = month, y = Reviewer_Score),alpha = 0.01) +
-   geom_smooth(aes(x = month, y = Reviewer_Score),lty="dashed") +
-   labs(title = "Predicted Reviewer Scores Over Time",
-        x = "Date",
-        y = "Predicted Reviewer Score") +
-   ylim(7,10) +
-   theme_minimal() #+ 
-   #geom_hline(aes(yintercept = avg_score, color = Hotel_Name), linetype = "dashed") 
- 
- 
- 
-   
- 
+```
+
+
+
+```{r}
+library(caret)
+
+
+# Load libraries
+library(tm)
+library(caret)
+
+# Sample data
+# Assuming Hotel_Reviews is your data frame
+# Hotel_Reviews <- read.csv("your_data.csv")
+
+# Create a Corpus
+corpus <- Corpus(VectorSource(Hotel_Reviews$Negative_Review))
+
+# Text preprocessing
+corpus <- tm_map(corpus, content_transformer(tolower))
+corpus <- tm_map(corpus, removePunctuation)
+corpus <- tm_map(corpus, removeNumbers)
+corpus <- tm_map(corpus, removeWords, stopwords("en"))
+corpus <- tm_map(corpus, stripWhitespace)
+
+dtm <- DocumentTermMatrix(corpus, control = list(wordLengths = c(1, Inf)))
+
+freq_terms <- findFreqTerms(dtm, lowfreq = 10)
+
+dtm <- DocumentTermMatrix(corpus, control = list(dictionary = freq_terms))
+
+
+# Convert DTM to TF-IDF
+tfidf <- weightTfIdf(dtm)
+
+
+
+# Convert to a data frame
+tfidf_df <- as.data.frame(as.matrix(tfidf))
+
+
+
+
+# Convert to a data frame
+dtm_df <- as.data.frame(as.matrix(dtm_top))
+
+
+model <- train(Class ~ ., data = trainData, method = "rf")
+
+
 ```
 
 ```{r}
-
- 
- new_data <- Hotel_Reviews %>%
-   dplyr::select(Country, month, date_object,Hotel_Name) %>% filter(Hotel_Name %in% sample(unique(Hotel_Reviews$Hotel_Name),10))
- #predictions <- predict(fit2, newdata = new_data,)
- 
- library(merTools)
- 
- pred_ints  = predictInterval(fit2, newdata=new_data, n.sims=1000 , returnSims = T, level =0.1)
- 
- new_data <- cbind(new_data, pred_ints)
- 
- 
+library(tidyverse) # mainly dplyr
+library(udpipe)    # tokenization & lemmatization
+library(caret)     # used to split the dataset to train / test
+library(keras)     # because Keras :)
 
 
- 
- # Calculate the average Reviewer_Score for each hotel
- average_scores <- Hotel_Reviews %>%
-   group_by(Hotel_Name) %>%
-   summarize(avg_score = mean(Reviewer_Score, na.rm = TRUE),n=length(Hotel_Name))
- # Merge the average scores with your new_data
- new_data <- new_data %>%
-   left_join(average_scores, by = "Hotel_Name")
- 
- ggplot(new_data, aes(x = date_object, y = fit, color = Hotel_Name)) +
-   geom_line() +
-  geom_ribbon(aes(ymin = lwr, ymax = upr, fill = "gray"), alpha = 0.1) +
-   labs(title = "Predicted Reviewer Scores Over Time with Confidence Intervals",
-        x = "Date",
-        y = "Predicted Reviewer Score") +
-   theme_minimal() + 
-   geom_hline(aes(yintercept = avg_score, color = Hotel_Name), linetype = "dashed") 
-   
+
+# directory for source data files
+network_path <- 'http://www.jla-data.net/ENG/2019-01-25-vocabulary-based-text-classification_files/'
+
+tf_tweets <- tempfile(fileext = ".csv") # create a temporary csv file
+download.file(paste0(network_path, 'tidy_tweets.csv'), tf_tweets, quiet = T)
+tweets <- read.csv(tf_tweets, stringsAsFactors = F) # read the tweet data in
+
+# download current udpipe model for English
+udtarget <- udpipe_download_model(language = "english",
+                                  model_dir = tempdir())
+# load the model
+udmodel <- udpipe_load_model(file = udtarget$file_model) 
+
+table(tweets$name) # verify structure of downloaded tweets
+
+
+words <- udpipe_annotate(udmodel, x = tweets$text, doc_id = tweets$id) %>% 
+  as.data.frame() %>%
+  select(id = doc_id, token, lemma, upos, sentence_id) %>%
+  mutate(id = as.numeric(id))
+
+vocabulary <- words %>%
+  count(lemma) %>%
+  ungroup() %>%
+  arrange(desc(n)) %>%
+  filter(n >=3) %>%  # little predictive value in rare words
+  mutate(id_slovo = row_number()) %>% # unique id per lemma
+  select(lemma, id_slovo)
+
+# a sneak peak at the vocabulary object
+glimpse(vocabulary)
+```
+
+
+```{r}
+# 150 zeroes for each tweet id for padding
+vata <- expand.grid(id = unique(words$id),
+                    word_num = 1:150,
+                    id_slovo = 0)
+
+word_matrix <- words %>% # words
+  # filtering join! words not in vocabulary are discarded
+  inner_join(vocabulary, by = c('lemma' = 'lemma')) %>% 
+  select(id, lemma, id_slovo) %>%
+  group_by(id) %>%
+  mutate(word_num = row_number()) %>% # 
+  ungroup() %>%
+  select(id, word_num, id_slovo) %>% # relevant columns
+  rbind(vata) %>% # bind the 150 zeroes per tweet
+  group_by(id, word_num) %>%
+  mutate(id_slovo = max(id_slovo)) %>% # will include duplicites
+  ungroup() %>%
+  unique() %>% # remove duplicites
+  spread(word_num, id_slovo) # spread to matrix format
+
+keras_input <- tweets %>%
+  select(id, name, text) %>%
+  inner_join(word_matrix, by = c('id' = 'id'))
+
+set.seed(42) # Zaphod Beeblebrox advises to trust no other!
+
+idx <- createDataPartition(keras_input$name, p = .8, list = F, times = 1) # 80 / 20 split
+
+train_data <- keras_input[idx, ] # train dataset
+test_data <- keras_input[-idx, ] # verification```
+```
+
+
+```{r}
+train_data <- train_data %>%
+  mutate(hadley = ifelse(name == 'hadleywickham', 1,0)) %>% # binary output
+  select(-id, -name, -text)
+
+x_train <- data.matrix(train_data %>% select(-hadley)) # everything except target
+y_train <- data.matrix(train_data %>% select(hadley)) # target, and target only
+
+vocab_size <- vocabulary %>% # count unique word ids
+  pull(id_slovo) %>% 
+  unique() %>%
+  length() + 1 # one extra for the zero padding
+
+
+model <- keras_model_sequential() 
+
+model %>% 
+  layer_embedding(input_dim = vocab_size, output_dim = 256) %>%
+  bidirectional(layer_lstm(units = 128)) %>%
+  layer_dropout(rate = 0.5) %>% 
+  layer_dense(units = 1, activation = 'sigmoid') # 1 = Hadley, 0 = Marie
+
+model %>% 
+  compile(optimizer = "rmsprop",
+          loss = "binary_crossentropy",
+          metrics = c("accuracy"))
+
+history <- model %>%  # fit the model (this will take a while...)
+  fit(x_train, 
+      y_train, 
+      epochs = 25, 
+      batch_size = nrow(train_data)/5, 
+      validation_split = 1/5)
+
+summary(model)
+
 ```
 

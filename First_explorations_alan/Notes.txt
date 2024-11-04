@@ -1,0 +1,5 @@
+Notes:
+
+
+# Comparison hierarchical versus fixed effect model
+-> strong regression to the mean effect causing only 10% versus 16% being credible for hierarchcial versus non-h models, respectively. 

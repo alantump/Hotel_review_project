@@ -1,0 +1,84 @@
+---
+title: "Hotel_exploration"
+author: "Alan"
+date: "2024-10-19"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(brms)
+library(ggplot2)
+library(lme4)
+library(lubridate)
+library(stringr)
+library(cowplot)
+library(shiny)
+
+```
+
+## R Markdown
+
+
+```{r cars}
+shiny_t = F #load shiny stuff?
+source("functions.R")
+
+Hotel_Reviews <- data_loader()
+
+
+# Filter hotels with at least 500 reviews
+Hotel_Reviews <- Hotel_Reviews %>%
+  group_by(Hotel_Name) %>%
+  filter(n() >= 100) %>%
+  ungroup()
+
+
+```
+
+
+```{r}
+# Plot predictions over time with confidence intervals
+ p_time = ggplot(Hotel_Reviews, aes(x = date_object, y = Reviewer_Score, color = Country)) +
+   geom_point(alpha=0.02) +
+  geom_smooth() +
+   labs(title = "Reviewer Scores Over Time ",
+        x = "Date",
+        y = "Reviewer Score") +
+      coord_cartesian(ylim = c(6, 10)) + 
+   theme_minimal() + theme(legend.position = "top")
+
+ p_month = ggplot(Hotel_Reviews, aes(x = month, y = Reviewer_Score, color = Country)) +
+   geom_point(alpha=0.02) +
+  geom_smooth() +
+   labs(title = "Reviewer Scores Over The Year ",
+        x = "Months",
+        y = "Reviewer Score") +
+      coord_cartesian(ylim = c(6, 10)) + 
+   theme_minimal() + theme(legend.position = "top")
+
+ 
+plot_grid(p_time,p_month)
+
+```
+
+```{r}
+
+ new_data <- Hotel_Reviews %>%
+   dplyr::select(Country, month, date_object,Hotel_Name,Reviewer_Score,Average_Score) %>% filter(Hotel_Name %in% sample(unique(Hotel_Reviews$Hotel_Name),7))
+
+ ggplot(new_data, aes(x = date_object, y = Reviewer_Score, color = Hotel_Name)) +
+   geom_point(alpha=0.02) +
+  geom_smooth() +
+  geom_line(aes(y=Average_Score)) +
+   labs(title = "Reviewer Scores Over Time ",
+        x = "Date",
+        y = "Reviewer Score") +
+      coord_cartesian(ylim = c(5, 10)) + 
+   theme_minimal() + theme(legend.position = "top")
+
+
+
+```
+
+

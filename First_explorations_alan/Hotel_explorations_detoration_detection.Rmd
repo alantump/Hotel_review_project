@@ -20,29 +20,9 @@ library(cowplot)
 
 
 ```{r cars}
-Hotel_Reviews <- readr::read_csv("Data/Hotel_Reviews.csv", quote =",")
+source("functions.R")
 
-
-countries <- readr::read_csv("Data/countries.csv", quote ="\"")
-
-Hotel_Reviews$Country = NA
-for (i in countries$name){
-  Hotel_Reviews$Country[str_detect(Hotel_Reviews$Hotel_Address, i)] = i
-  }
-  
-
-summary(Hotel_Reviews)
-
-Hotel_Reviews <- Hotel_Reviews %>% mutate(time = as.numeric(as.POSIXct(Review_Date,format="%m/%d/%Y") ))
-date_object <- as.Date(Hotel_Reviews$Review_Date, format = "%m/%d/%Y")
-months <- month(date_object)
-Hotel_Reviews$date_object = date_object
-Hotel_Reviews$month = months
-Hotel_Reviews$num_date_object = as.numeric(date_object)/365
-
-
-
-
+Hotel_Reviews <- data_loader()
 
 # Filter hotels with at least 500 reviews
 Hotel_Reviews <- Hotel_Reviews %>%
@@ -50,11 +30,6 @@ Hotel_Reviews <- Hotel_Reviews %>%
   filter(n() >= 300) %>%
   ungroup()
 
-
-avg = Hotel_Reviews %>% group_by(Hotel_Name) %>% summarise(Avg = mean(Average_Score),
-                                                    own_avg = mean(Reviewer_Score))
-
-head(avg)
 
 ```
 

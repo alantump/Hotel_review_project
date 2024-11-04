@@ -20,28 +20,10 @@ library(cowplot)
 
 
 ```{r cars}
-Hotel_Reviews <- readr::read_csv("Data/Hotel_Reviews.csv", quote =",")
+shiny_t = F #load shiny stuff?
+source("functions.R")
 
-
-countries <- readr::read_csv("Data/countries.csv", quote ="\"")
-
-Hotel_Reviews$Country = NA
-for (i in countries$name){
-  Hotel_Reviews$Country[str_detect(Hotel_Reviews$Hotel_Address, i)] = i
-  }
-  
-
-summary(Hotel_Reviews)
-
-Hotel_Reviews <- Hotel_Reviews %>% mutate(time = as.numeric(as.POSIXct(Review_Date,format="%m/%d/%Y") ))
-date_object <- as.Date(Hotel_Reviews$Review_Date, format = "%m/%d/%Y")
-months <- month(date_object)
-Hotel_Reviews$date_object = date_object
-Hotel_Reviews$month = months
-Hotel_Reviews$num_date_object = as.numeric(date_object)/365
-
-
-
+Hotel_Reviews <- data_loader()
 
 
 # Filter hotels with at least 500 reviews
@@ -138,21 +120,6 @@ test_data = Hotel_Reviews %>% filter(date_object > trip_start &
 ```{r pressure}
 
 
-prior <- c(
-  prior("normal(10, 2)", class = "Intercept"),
-  set_prior("normal(0, 0.1)", class = "sd")
-)
-
- fit = brm(bf(
-   Reviewer_Score ~ 1 +  (1 + time_ref || Hotel_Name)),
-   data = detection_data, cores = 4, chains = 4,  backend = "cmdstanr", threads = threading(4), prior = prior, file = "fit_1half")
- 
- 
-
- 
- fit = brm(bf(
-   Reviewer_Score ~ 0 +  Hotel_Name+ time_ref:Hotel_Name),
-   data = detection_data, cores = 4, chains = 4,  backend = "cmdstanr", threads = threading(4), file = "fit_non_h")
  
 
 ```
@@ -160,6 +127,70 @@ prior <- c(
 ```{r}
 
  
+
+ 
+fit = brm(bf(
+   Reviewer_Score ~ 0 +  Hotel_Name+ time_ref:Hotel_Name),
+   data = detection_data, cores = 4, chains = 4,  backend = "cmdstanr", threads = threading(4), file = "BRMS_models/fit_non_h")
+ 
+
+
+model_summary <- summary(fit)
+
+# Extract the fixed effects table
+coefficients_table <- model_summary$fixed
+
+# Extract only the interaction terms
+interaction_summary <- coefficients_table[grep(":", rownames(coefficients_table)), ]
+
+# Convert to a data frame and process
+random_effct <- data.frame(interaction_summary) %>%
+  mutate(Name = rownames(.)) %>%
+  arrange(Estimate) %>%
+  mutate(Name = factor(Name, levels = Name)) %>%
+  mutate(Pos = ifelse(l.95..CI > 0, 1, 0),
+         Neg = ifelse(u.95..CI < 0, 1, 0),
+         tendency = Pos - Neg)
+
+ 
+ mean(random_effct$Neg)
+
+```
+
+```{r}
+
+ 
+
+
+prior <- c(
+  prior("normal(10, 2)", class = "Intercept"),
+  set_prior("normal(0, 0.1)", class = "sd")
+)
+
+ fit = brm(bf(
+   Reviewer_Score ~ 1 +  (1 + time_ref || Hotel_Name)),
+   data = detection_data, cores = 4, chains = 4,  backend = "cmdstanr", threads = threading(4), prior = prior, file = "BRMS_models/fit_1half")
+ 
+
+random_effct = ranef(fit)$Hotel_Name[,,2]
+ random_effct = data.frame(random_effct) %>% mutate(Name= rownames(.)) %>%   arrange(Estimate) %>%
+  mutate(Name = factor(Name, levels = Name)) %>% mutate(Pos = ifelse(Q2.5>0, 1, 0),
+                                                        Neg = ifelse(Q97.5<0, 1, 0)) 
+ 
+ 
+ mean(random_effct$Neg)
+ 
+ 
+ 
+ random_effct %>% ggplot(aes(x=Name, y= Estimate, colour = as.factor(Neg))) + geom_point() +
+   geom_pointrange(aes(ymin = Q2.5 ,ymax=Q97.5),alpha=0.2) + coord_flip() + geom_hline(yintercept = 0) 
+ 
+ 
+```
+
+```{r}
+
+
 random_effct = ranef(fit,probs = c(0.1, 0.9))$Hotel_Name[,,1] #Intercept
  random_effct = data.frame(random_effct) %>% mutate(Name= rownames(.)) %>%   arrange(Estimate) %>%
   mutate(Name = factor(Name, levels = Name)) %>% mutate(Pos = ifelse(Q10>0, 1, 0),
@@ -213,6 +244,9 @@ cat(paste0("\nPrediction:\nAbsolute error: ", ame, " vs. H0- ",ame_ho,
 #non-h Absolute error: 1.27801796184937 vs. H0- 1.39333515816055
 
 ```
+
+
+
 ```{r}
 
 
