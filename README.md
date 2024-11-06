@@ -1,21 +1,19 @@
-# Hotel Review project
+# Hotel Review Project
 
-This, or something similar, is the what you see when trying to book a hotel on booking.com.
-The most important inforaiton people use when booking a hotel is the room price followed by costumer rating.
+This, or something similar, is what you see when you try to book a hotel on booking.com.
+The most important information people use when booking a hotel is the room price, followed by the customer rating.
 
-<img src="pics/Booking_page.png" width="60%">
+<img src="pics/Booking_page.png" width="60%">.
 
-Scoring play such a vital role when booking a hotel because the past experiance of hotel guest is usually a pretty good approximation of the experiance of potential future guests---including yourself.
-Thus, people are willing to pay quite a lot more for hotels with good scorings (see Literature: https://api.semanticscholar.org/CorpusID:54877756 or https://api.semanticscholar.org/CorpusID:203160926).
-On the flipside this means that people I paying too much for hotels where the scoring are not reflecting their true quality. 
+Reviews play such an important role in booking a hotel because the past experience of hotel guests is usually a pretty good approximation of the experience of potential future guests--including you.
+Thus, people are willing to pay quite a bit more for hotels with good scores (see literature: https://api.semanticscholar.org/CorpusID:54877756 or https://api.semanticscholar.org/CorpusID:203160926).
+On the other hand, this also means that people pay too much for hotels whose scores do not reflect their true quality. 
 
-Here we want to better inform costumer by developing a google chrome extension which allows to better judge how much the current score is fair, too low or too high uisng three steps:
+Here we want to better inform consumers by developing a Google Chrome extension that allows them to better judge how much the current rating is fair, too low or too high in three steps:
 
-1. Trend detector: which identifies hotels which have detorating review scores. The scores of these hotels are too high and should be used with causion.
-2. Score predictor: which predicts the near future review scores and therefore a fairer evaluation of the hotel.
-3. Reason extractor. A NLP model which identifies reviews associated with detorating hotels, thereby providing additional insights.
-
-This could look something like this:
+1. Trend Detector: which identifies hotels that have deteriorating review scores. The scores of these hotels are too high and should be used with caution.
+2. Score Predictor: which predicts the near future review scores and therefore a fairer evaluation of the hotel.
+3. Reason Extractor. An NLP model that identifies reviews that are associated with detrending hotels, thereby providing additional insights.
 
 <img src="pics/Hotel_example.png" width="60%">
 
