@@ -3,7 +3,7 @@
 This project analyses Hotel Reviews and identifyies whether the scroing of a hotel is stable increasing or decreasing and provides review summaries.
 
 
-![Alt text](Booking_page.png)
+![Alt text](pics/Booking_page.png)
 
 _________________________________________________________________________________________________________
 
