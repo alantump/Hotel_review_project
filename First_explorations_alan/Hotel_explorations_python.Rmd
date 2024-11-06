@@ -14,7 +14,7 @@ output: html_document
 
 
 ```{python cars}
-
+import numpy as np
 import pandas as pd
 import re  # for regular expression matching
 
@@ -97,10 +97,7 @@ model = sm.OLS.from_formula(
     data=Hotel_Reviews
 ).fit()
 
-# Save the model
-#import pickle
-#with open("Simple_lm.pkl", "wb") as f:
-#    pickle.dump(model, f)
+model.save("simple_lm.pickle")
 
 ```
 
@@ -110,19 +107,21 @@ import scipy.stats as stats
 
 # Extract interaction coefficients
 
-interaction_terms = model.params[model.params.index.str.contains(":")]
+#interaction_terms = model.params[model.params.index.str.contains(":")]
 
 
 
 # Create a DataFrame for interaction effects
-time_effect_df = pd.DataFrame(interaction_terms, columns=["Estimate"])
+time_effect_df = pd.DataFrame(model.params, columns=["Estimate"])
 time_effect_df.index.name = "Name"
 time_effect_df.reset_index(inplace=True)
 
 # Extract hotel names and calculate t-statistics
 time_effect_df["Hotel_Name"] = time_effect_df["Name"].str.extract(r"\[(.*?)\]")
 time_effect_df["t_value"] = time_effect_df.index.map(lambda x: model.tvalues.iloc[x])
-time_effect_df["t_value"] = time_effect_df.index.map(lambda x: model.tvalues.iloc[x])
+time_effect_df["Std.Error"] = time_effect_df.index.map(lambda x: model.bse.iloc[x])
+
+time_effect_df = time_effect_df[model.params.index.str.contains(":")]
 
 # Calculate significance threshold
 t_threshold = stats.t.ppf(0.90, df=model.df_resid)
@@ -136,9 +135,11 @@ time_effect_df["tendency"] = time_effect_df["Pos"] - time_effect_df["Neg"]
 time_effect_df.sort_values("Estimate", inplace=True)
 
 plt.figure(figsize=(10, 6))
-plt.hlines(0, xmin=-1, xmax=len(time_effect_df), colors='gray', linestyles='--')
+# Remove the horizontal line
+errorbar_colors = time_effect_df["tendency"].map({-1: "red", 0: "gray", 1: "blue"})
+plt.errorbar(time_effect_df.index, time_effect_df["Estimate"], yerr=time_effect_df["Std.Error"], fmt='none', ecolor=errorbar_colors, capsize=5)
+#plt.hlines(0, xmin=-1, xmax=len(time_effect_df), colors='gray', linestyles='--')
 plt.scatter(time_effect_df.index, time_effect_df["Estimate"], c=time_effect_df["tendency"].map({-1: "red", 0: "gray", 1: "blue"}))
-plt.errorbar(time_effect_df.index, time_effect_df["Estimate"], yerr=time_effect_df["std err"] * 2, fmt='none', c=[(0, 0), (0, 0)])
 plt.xticks(time_effect_df.index, time_effect_df["Hotel_Name"], rotation=45, ha='right')
 plt.ylabel("Estimate")
 plt.title("Time Effect by Hotel")
@@ -150,239 +151,142 @@ plt.text(x=len(time_effect_df) + 0.5, y=0.1, s=f"Mean Pos: {mean_pos:.2f}", font
 plt.text(x=len(time_effect_df) + 0.5, y=-0.1, s=f"Mean Neg: {mean_neg:.2f}", fontsize=12, color="red")
 
 plt.show()
+
+
  
  
+sorted = time_effect_df.sort_values("Estimate").reset_index(drop=True)
  
  
+plt.figure(figsize=(10, 6))
+# Remove the horizontal line
+errorbar_colors = sorted["tendency"].map({-1: "red", 0: "gray", 1: "blue"})
+plt.errorbar(sorted.index, sorted["Estimate"], yerr=sorted["Std.Error"], ecolor=errorbar_colors, capsize=0.5)
+#plt.hlines(0, xmin=-1, xmax=len(sorted), colors='gray', linestyles='--')
+#plt.scatter(sorted.index, sorted["Estimate"], c=sorted["tendency"].map({-1: "red", 0: "gray", 1: "blue"}))
+plt.xticks(sorted.index, sorted["Hotel_Name"], rotation=45, ha='right')
+plt.ylabel("Estimate")
+plt.title("Time Effect by Hotel")
+
+# Add text annotations
+mean_pos = sorted["Pos"].mean()
+mean_neg = sorted["Neg"].mean()
+plt.text(x=len(sorted) + 0.5, y=0.1, s=f"Mean Pos: {mean_pos:.2f}", fontsize=12, color="blue")
+plt.text(x=len(sorted) + 0.5, y=-0.1, s=f"Mean Neg: {mean_neg:.2f}", fontsize=12, color="red")
+
+plt.show()
+
 ```
 
 
 # Predictive performance
 
-```{r}
+```{python}
 
-
-detection_data2 = detection_data
-detection_data2$Estimate = predict(fit, newdata = detection_data )
-
-
-
-rmse = sqrt(mean((detection_data2$Estimate - detection_data$Reviewer_Score)^2))
-ame = (mean(abs(detection_data2$Estimate - detection_data$Reviewer_Score)))
-cat(paste0("Insample:\nAbsolute error: ", ame,
-             "\nRMSE: ",rmse))
- 
-
-test_data2 = test_data
-test_data2$Estimate = predict(fit, newdata = test_data)
-
-rmse = sqrt(mean((test_data2$Estimate - test_data$Reviewer_Score)^2))
-ame = (mean(abs(test_data2$Estimate - test_data$Reviewer_Score)))
-rmse_ho = sqrt(mean((mean(Hotel_Reviews$Average_Score[Hotel_Reviews$time_ref<0]) - test_data$Reviewer_Score)^2))
-ame_ho = (mean(abs(mean(Hotel_Reviews$Average_Score[Hotel_Reviews$time_ref<0]) - test_data$Reviewer_Score)))
-cat(paste0("\nPrediction:\nAbsolute error: ", ame, " vs. H0- ",ame_ho,
-             "\nRMSE: ",rmse, "vs. H0- ",rmse_ho))
-
-```
-```{r}
- past_average <- Hotel_Reviews %>% filter(time_ref<0) %>% group_by(Hotel_Name) %>% summarise(past_average = mean(Reviewer_Score))
-
-grouped_test_data <- test_data2 %>% group_by(Hotel_Name) %>% summarise(mean_review = mean(Reviewer_Score)) %>%
-  left_join(time_effct %>% mutate(Hotel_Name=Name), by = "Hotel_Name") %>%
-    left_join(past_average, by = "Hotel_Name") %>% mutate(correct_neg = past_average>mean_review, correct_pos = past_average<mean_review  )
-
- grouped_test_data %>% group_by(Neg) %>% summarise(m = mean(correct_neg))
- grouped_test_data %>% group_by(Pos) %>% summarise(m = mean(correct_pos))
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 
 
+# In-sample predictions and error calculation
+detection_data2 = detection_data.copy()  # Create a copy to avoid modifying original data
+detection_data2['Estimate'] = model.predict(detection_data)
 
+in_sample_rmse = np.sqrt(mean_squared_error(detection_data2['Reviewer_Score'], detection_data2['Estimate']))
+in_sample_ame = mean_absolute_error(detection_data2['Reviewer_Score'], detection_data2['Estimate'])
 
-proportion_data_neg <- grouped_test_data %>%
-  group_by(Neg, correct_neg) %>%
-  summarise(m = length(Hotel_Name)) %>%
-  ungroup() %>%
-  mutate(proportion = m / sum(m))
+print("In-sample:\nAbsolute Error:", in_sample_ame, "\nRMSE:", in_sample_rmse)
 
+# Out-of-sample predictions and error calculation
+test_data2 = test_data.copy()
+test_data2['Estimate'] = model.predict(test_data)
 
+out_sample_rmse = np.sqrt(mean_squared_error(test_data2['Reviewer_Score'], test_data2['Estimate']))
+out_sample_ame = mean_absolute_error(test_data2['Reviewer_Score'], test_data2['Estimate'])
 
-proportion_data_pos <- grouped_test_data %>%
-  group_by(Pos, correct_pos) %>%
-  summarise(m = length(Hotel_Name)) %>%
-  ungroup() %>%
-  mutate(proportion = m / sum(m))
+# Baseline model
+baseline_rmse = np.sqrt(mean_squared_error(test_data['Reviewer_Score'], test_data['Average_Score']))
+baseline_ame = mean_absolute_error(test_data['Reviewer_Score'], test_data['Average_Score'])
 
-
-# Calculate Recall and F1 Score
-true_positive <- proportion_data_neg %>% filter(Neg == 1, correct_neg == 1) %>% pull(m)
-false_negative <- proportion_data_neg %>% filter(Neg == 0, correct_neg == 1) %>% pull(m)
-false_positive <- proportion_data_neg %>% filter(Neg == 1, correct_neg == 0) %>% pull(m)
-
-recall_neg <- true_positive / (true_positive + false_negative)
-precision_neg <- true_positive / (true_positive + false_positive)
-f1_score_neg <- 2 * (precision * recall) / (precision + recall)
-
-
-# Calculate Recall and F1 Score
-true_positive <- proportion_data_pos %>% filter(Pos == 1, correct_pos == 1) %>% pull(m)
-false_Posative <- proportion_data_pos %>% filter(Pos == 0, correct_pos == 1) %>% pull(m)
-false_positive <- proportion_data_pos %>% filter(Pos == 1, correct_pos == 0) %>% pull(m)
-
-recall_pos <- true_positive / (true_positive + false_negative)
-precision_pos <- true_positive / (true_positive + false_positive)
-f1_score_pos <- 2 * (precision * recall) / (precision + recall)
-
-
-# Plot the proportions as a 2x2 matrix
-plot_grid(ggplot(proportion_data_neg, aes(y = factor(Neg), x = factor(correct_neg), fill = proportion)) +
-  geom_tile() +
-  geom_text(aes(label = round(proportion, 2)), color = "black") +
-  scale_fill_gradient(low = "white", high = "darkred") +
-  theme_minimal() +
-  labs(x = "Reviews being worse than past average", y = "Detoration detection", fill = "Proportion") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  annotate("text", x = 1.5, y = 2.4, label = paste("Recall:", round(recall_neg, 2)), size = 4, color = "black") +
-  annotate("text", x = 1.5, y = 2.3, label = paste("Precision:", round(precision_neg, 2)), size = 4, color = "black") +
-  annotate("text", x = 1.5, y = 2.2, label = paste("F1 Score:", round(f1_score_neg, 2)), size = 4, color = "black"),
-  ggplot(proportion_data_pos, aes(y = factor(Pos), x = factor(correct_pos), fill = proportion)) +
-  geom_tile() +
-  geom_text(aes(label = round(proportion, 2)), color = "black") +
-  scale_fill_gradient(low = "white", high = "darkgreen") +
-  theme_minimal() +
-  labs(x = "Reviews being better than past average", y = "Imporvement detection", fill = "Proportion") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  annotate("text", x = 1.5, y = 2.4, label = paste("Recall:", round(recall_pos, 2)), size = 4, color = "black") +
-  annotate("text", x = 1.5, y = 2.3, label = paste("Precision:", round(precision_pos, 2)), size = 4, color = "black") +
-  annotate("text", x = 1.5, y = 2.2, label = paste("F1 Score:", round(f1_score_pos, 2)), size = 4, color = "black"))
-
+print("\nOut-of-sample:\nAbsolute Error:", out_sample_ame, "vs. Baseline:", baseline_ame, "\nRMSE:", out_sample_rmse, "vs. Baseline:", baseline_rmse)
 
 ```
 
 
 
-```{r}
+
+```{python}
+import seaborn as sns
 
 
+# Calculate significance threshold
+t_threshold = stats.t.ppf(0.40, df=model.df_resid)
 
-# Define UI
-ui <- fluidPage(
-  mainPanel(
-    sliderInput("Sensetivity", "Sensetivity:", min = 0, max=1, step =0.05, value=0.1),
-    plotOutput("distPlot", height = "600px")
-  )
-)
-
-
-server <- function(input, output) {
-  output$distPlot <- renderPlot({
-    
-    t_threshold <- qt(1-input$Sensetivity/2,Inf)
-    
-
- 
-all_coefficients = coef(fit)
-model_summary <- summary(fit)
-
-# Extract the coefficients table
-coefficients_table <- model_summary$coefficients
-
-# Extract only the interaction terms
-interaction_summary <- coefficients_table[grep(":", rownames(coefficients_table)), ]
+# Determine significance and direction
+time_effect_df["Pos"] = (time_effect_df["t_value"] > t_threshold).astype(int)
+time_effect_df["Neg"] = (time_effect_df["t_value"] < -t_threshold).astype(int)
+time_effect_df["tendency"] = time_effect_df["Pos"] - time_effect_df["Neg"]
 
 
- time_effct = data.frame(interaction_summary) %>% mutate(Name= rownames(.),
-                                                         Name = stringr::str_replace(Name, c("Hotel_Name"),""),
-                                                         Name = stringr::str_replace(Name, c(":time_ref"),"")) %>%
-   arrange(Estimate) %>%
-  mutate(Name = factor(Name, levels = Name)) %>% mutate(Pos = ifelse(t.value>t_threshold, 1, 0),
-                                                        Neg = ifelse(t.value<(-t_threshold), 1, 0),
-                                                        tendency = Pos-Neg) 
+# Calculate past average for each hotel
+past_average = Hotel_Reviews[Hotel_Reviews['time_ref'] < 0].groupby('Hotel_Name')['Reviewer_Score'].mean().reset_index(name='past_average')
 
- 
- p1 = time_effct %>% ggplot(aes(x=Name, y= Estimate, colour = as.factor(tendency))) + geom_point() +
-   geom_pointrange(aes(ymin = Estimate - (Std..Error*2) ,ymax= Estimate + (Std..Error*2)),alpha=0.2) + 
-   coord_flip() + geom_hline(yintercept = 0) + theme(legend.position = "top") +
-  annotate("text", x = Inf, y = Inf, label = paste("Mean Pos:", round(mean(time_effct$Pos), 2)), hjust = 1.1, vjust = 2, size = 4, color = "blue") +
-  annotate("text", x = Inf, y = Inf, label = paste("Mean Neg:", round(mean(time_effct$Neg), 2)), hjust = 1.1, vjust = 3.5, size = 4, color = "red")
- 
- past_average <- Hotel_Reviews %>% filter(time_ref<0) %>% group_by(Hotel_Name) %>% summarise(past_average = mean(Reviewer_Score))
+# Group test data by hotel and calculate mean review
+grouped_test_data = test_data2.groupby('Hotel_Name')['Reviewer_Score'].mean().reset_index(name='mean_review')
 
-grouped_test_data <- test_data2 %>% group_by(Hotel_Name) %>% summarise(mean_review = mean(Reviewer_Score)) %>%
-  left_join(time_effct %>% mutate(Hotel_Name=Name), by = "Hotel_Name") %>%
-    left_join(past_average, by = "Hotel_Name") %>% mutate(correct_neg = past_average>mean_review, correct_pos = past_average<mean_review  )
+# Join with time_effect_df and past_average
+grouped_test_data = grouped_test_data.merge(time_effect_df, left_on='Hotel_Name', right_on='Hotel_Name')
+grouped_test_data = grouped_test_data.merge(past_average, on='Hotel_Name')
 
- grouped_test_data %>% group_by(Neg) %>% summarise(m = mean(correct_neg))
- grouped_test_data %>% group_by(Pos) %>% summarise(m = mean(correct_pos))
+# Calculate correct predictions
+grouped_test_data['correct_neg'] = grouped_test_data['past_average'] > grouped_test_data['mean_review']
+grouped_test_data['correct_pos'] = grouped_test_data['past_average'] < grouped_test_data['mean_review']
 
+# Calculate proportions for negative and positive cases
+proportion_data_neg = grouped_test_data.groupby(['Neg', 'correct_neg']).size().reset_index(name='m')
+proportion_data_neg['proportion'] = proportion_data_neg['m'] / proportion_data_neg['m'].sum()
 
+proportion_data_pos = grouped_test_data.groupby(['Pos', 'correct_pos']).size().reset_index(name='m')
+proportion_data_pos['proportion'] = proportion_data_pos['m'] / proportion_data_pos['m'].sum()
 
+# Calculate recall, precision, and F1-score for negative cases
+true_positive_neg = proportion_data_neg[(proportion_data_neg['Neg'] == 1) & (proportion_data_neg['correct_neg'] == 1)]['m'].values[0]
+false_negative_neg = proportion_data_neg[(proportion_data_neg['Neg'] == 0) & (proportion_data_neg['correct_neg'] == 1)]['m'].values[0]
+false_positive_neg = proportion_data_neg[(proportion_data_neg['Neg'] == 1) & (proportion_data_neg['correct_neg'] == 0)]['m'].values[0]
 
+recall_neg = true_positive_neg / (true_positive_neg + false_negative_neg)
+precision_neg = true_positive_neg / (true_positive_neg + false_positive_neg)
+f1_score_neg = 2 * (precision_neg * recall_neg) / (precision_neg + recall_neg)
 
-proportion_data_neg <- grouped_test_data %>%
-  group_by(Neg, correct_neg) %>%
-  summarise(m = length(Hotel_Name)) %>%
-  ungroup() %>%
-  mutate(proportion = m / sum(m))
+# Calculate recall, precision, and F1-score for positive cases
+true_positive_pos = proportion_data_pos[(proportion_data_pos['Pos'] == 1) & (proportion_data_pos['correct_pos'] == 1)]['m'].values[0]
+false_negative_pos = proportion_data_pos[(proportion_data_pos['Pos'] == 0) & (proportion_data_pos['correct_pos'] == 1)]['m'].values[0]
+false_positive_pos = proportion_data_pos[(proportion_data_pos['Pos'] == 1) & (proportion_data_pos['correct_pos'] == 0)]['m'].values[0]
 
+recall_pos = true_positive_pos / (true_positive_pos + false_negative_pos)
+precision_pos = true_positive_pos / (true_positive_pos + false_positive_pos)
+f1_score_pos = 2 * (precision_pos * recall_pos) / (precision_pos + recall_pos)
 
+# Plot the proportions
+fig, axs = plt.subplots(1, 2, figsize=(12, 6))
 
-proportion_data_pos <- grouped_test_data %>%
-  group_by(Pos, correct_pos) %>%
-  summarise(m = length(Hotel_Name)) %>%
-  ungroup() %>%
-  mutate(proportion = m / sum(m))
+sns.heatmap(proportion_data_neg.pivot_table(values='proportion', index='Neg', columns='correct_neg'), annot=True, fmt='.2f', cmap='coolwarm', ax=axs[0])
+axs[0].set_title('Negative Cases')
+axs[0].set_xlabel('Correct Negative')
+axs[0].set_ylabel('Predicted Negative')
+axs[0].text(0.5, 2.5, f'Recall: {recall_neg:.2f}\nPrecision: {precision_neg:.2f}\nF1-Score: {f1_score_neg:.2f}', ha='center', va='center')
 
+sns.heatmap(proportion_data_pos.pivot_table(values='proportion', index='Pos', columns='correct_pos'), annot=True, fmt='.2f', cmap='coolwarm', ax=axs[1])
+axs[1].set_title('Positive Cases')
+axs[1].set_xlabel('Correct Positive')
+axs[1].set_ylabel('Predicted Positive')
+axs[1].text(0.5, 2.5, f'Recall: {recall_pos:.2f}\nPrecision: {precision_pos:.2f}\nF1-Score: {f1_score_pos:.2f}', ha='center', va='center')
 
-# Calculate Recall and F1 Score
-true_positive <- proportion_data_neg %>% filter(Neg == 1, correct_neg == 1) %>% pull(m)
-false_negative <- proportion_data_neg %>% filter(Neg == 0, correct_neg == 1) %>% pull(m)
-false_positive <- proportion_data_neg %>% filter(Neg == 1, correct_neg == 0) %>% pull(m)
-
-recall_neg <- true_positive / (true_positive + false_negative)
-precision_neg <- true_positive / (true_positive + false_positive)
-f1_score_neg <- 2 * (precision_neg * recall_neg) / (precision_neg + recall_neg)
-
-
-# Calculate Recall and F1 Score
-true_positive <- proportion_data_pos %>% filter(Pos == 1, correct_pos == 1) %>% pull(m)
-false_Posative <- proportion_data_pos %>% filter(Pos == 0, correct_pos == 1) %>% pull(m)
-false_positive <- proportion_data_pos %>% filter(Pos == 1, correct_pos == 0) %>% pull(m)
-
-recall_pos <- true_positive / (true_positive + false_negative)
-precision_pos <- true_positive / (true_positive + false_positive)
-f1_score_pos <- 2 * (precision_pos * recall_pos) / (precision_pos + recall_pos)
-
-
-# Plot the proportions as a 2x2 matrix
-plot_grid(p1,plot_grid(ggplot(proportion_data_neg, aes(y = factor(Neg), x = factor(correct_neg), fill = proportion)) +
-  geom_tile() +
-  geom_text(aes(label = round(proportion, 2)), color = "black") +
-  scale_fill_gradient(low = "white", high = "darkred") +
-  theme_minimal() +
-  labs(x = "Reviews being worse than past average", y = "Detoration detection", fill = "Proportion") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  annotate("text", x = 1.5, y = 2.4, label = paste("Recall:", round(recall_neg, 2)), size = 4, color = "black") +
-  annotate("text", x = 1.5, y = 2.3, label = paste("Precision:", round(precision_neg, 2)), size = 4, color = "black") +
-  annotate("text", x = 1.5, y = 2.2, label = paste("F1 Score:", round(f1_score_neg, 2)), size = 4, color = "black"),
-  ggplot(proportion_data_pos, aes(y = factor(Pos), x = factor(correct_pos), fill = proportion)) +
-  geom_tile() +
-  geom_text(aes(label = round(proportion, 2)), color = "black") +
-  scale_fill_gradient(low = "white", high = "darkgreen") +
-  theme_minimal() +
-  labs(x = "Reviews being better than past average", y = "Imporvement detection", fill = "Proportion") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  annotate("text", x = 1.5, y = 2.4, label = paste("Recall:", round(recall_pos, 2)), size = 4, color = "black") +
-  annotate("text", x = 1.5, y = 2.3, label = paste("Precision:", round(precision_pos, 2)), size = 4, color = "black") +
-  annotate("text", x = 1.5, y = 2.2, label = paste("F1 Score:", round(f1_score_pos, 2)), size = 4, color = "black")), ncol=1)
-
-  })
-}
-
-
- shinyApp(ui = ui, server = server)
-
- 
+plt.tight_layout()
+plt.show()
 ```
+
+
+
 
 
 

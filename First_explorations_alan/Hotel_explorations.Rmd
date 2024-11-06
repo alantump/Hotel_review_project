@@ -143,8 +143,8 @@ test_data2$Estimate = predict(fit, newdata = test_data)
 
 rmse = sqrt(mean((test_data2$Estimate - test_data$Reviewer_Score)^2))
 ame = (mean(abs(test_data2$Estimate - test_data$Reviewer_Score)))
-rmse_ho = sqrt(mean((mean(Hotel_Reviews$Average_Score[Hotel_Reviews$time_ref<0]) - test_data$Reviewer_Score)^2))
-ame_ho = (mean(abs(mean(Hotel_Reviews$Average_Score[Hotel_Reviews$time_ref<0]) - test_data$Reviewer_Score)))
+rmse_ho = sqrt(mean((test_data$Average_Score - test_data$Reviewer_Score)^2))
+ame_ho = mean(abs(test_data$Average_Score - test_data$Reviewer_Score))
 cat(paste0("\nPrediction:\nAbsolute error: ", ame, " vs. H0- ",ame_ho,
              "\nRMSE: ",rmse, "vs. H0- ",rmse_ho))
 
