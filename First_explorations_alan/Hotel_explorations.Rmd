@@ -13,7 +13,7 @@ library(lme4)
 library(lubridate)
 library(stringr)
 library(cowplot)
-
+library(shiny)
 ```
 
 ## R Markdown
@@ -47,7 +47,7 @@ length(unique(Hotel_Reviews$Hotel_Name))
 
 
 
-trip_time = 31 * 3 #day 
+trip_time = 31 * 5 #day 
 trip_start = max(Hotel_Reviews$date_object)-trip_time 
 booking_time = trip_start
 attention_window = 356 * 1.5
@@ -55,7 +55,7 @@ attention_window = 356 * 1.5
 
 Hotel_Reviews = Hotel_Reviews %>% mutate(time_ref = as.numeric(date_object- booking_time)/30.5)
 
-detection_data = Hotel_Reviews %>% filter(date_object < booking_time &
+train_data = Hotel_Reviews %>% filter(date_object < booking_time &
                                             date_object > (booking_time-attention_window) )
 
 
@@ -76,22 +76,22 @@ test_data = Hotel_Reviews %>% filter(date_object > trip_start &
 ```{r pressure}
 
 
-#fit = lm(
-#   Reviewer_Score ~ 0 +  Hotel_Name + time_ref:Hotel_Name, data = Hotel_Reviews)
+fit = lm(
+   Reviewer_Score ~ 0 +  Hotel_Name + time_ref:Hotel_Name, data = train_data)
 #save(fit, file = "Simple_lm.RData")
+all_coefficients = coef(fit)
+model_summary <- summary(fit)
+#fit = strip_lm(fit)
 
-
-load(file = "Simple_lm.RData")
+#load(file = "Simple_lm.RData")
 
 ```
 
 ```{r}
 
-t_threshold =  qt(0.90,Inf)
+t_threshold =  qt(0.8,Inf)
 
- 
-all_coefficients = coef(fit)
-model_summary <- summary(fit)
+
 
 # Extract the coefficients table
 coefficients_table <- model_summary$coefficients
@@ -111,10 +111,12 @@ interaction_summary <- coefficients_table[grep(":", rownames(coefficients_table)
  
  time_effct %>% ggplot(aes(x=Name, y= Estimate, colour = as.factor(tendency))) + geom_point() +
    geom_pointrange(aes(ymin = Estimate - (Std..Error*2) ,ymax= Estimate + (Std..Error*2)),alpha=0.2) + 
-   coord_flip() + geom_hline(yintercept = 0) + theme(legend.position = "top") +
-  annotate("text", x = Inf, y = Inf, label = paste("Mean Pos:", round(mean(time_effct$Pos), 2)), hjust = 1.1, vjust = 2, size = 4, color = "blue") +
-  annotate("text", x = Inf, y = Inf, label = paste("Mean Neg:", round(mean(time_effct$Neg), 2)), hjust = 1.1, vjust = 3.5, size = 4, color = "red")
- 
+   coord_flip() + geom_hline(yintercept = 0) + theme(legend.position = "None") +
+   scale_color_manual(values=c("#F8766D", "#56B4E9", "#7CAE00")) + 
+  annotate("text", x = Inf, y = Inf, label = paste("Positive trend:", round(mean(time_effct$Pos), 2)), hjust = 1, vjust = 2+3, size = 4, color = "#7CAE00") +
+  annotate("text", x = Inf, y = Inf, label = paste("No clear trend:", round(mean(time_effct$tendency==0), 2)), hjust = 1, vjust = 3.5+3, size = 4, color = "#56B4E9") +
+  annotate("text", x = Inf, y = Inf, label = paste("Negative trend:", round(mean(time_effct$Neg), 2)), hjust = 1, vjust = 5+3, size = 4, color = "#F8766D") 
+
  
  
  
@@ -127,13 +129,13 @@ interaction_summary <- coefficients_table[grep(":", rownames(coefficients_table)
 ```{r}
 
 
-detection_data2 = detection_data
-detection_data2$Estimate = predict(fit, newdata = detection_data )
+train_data2 = train_data
+train_data2$Estimate = predict(fit, newdata = train_data )
 
 
 
-rmse = sqrt(mean((detection_data2$Estimate - detection_data$Reviewer_Score)^2))
-ame = (mean(abs(detection_data2$Estimate - detection_data$Reviewer_Score)))
+rmse = sqrt(mean((train_data2$Estimate - train_data$Reviewer_Score)^2))
+ame = (mean(abs(train_data2$Estimate - train_data$Reviewer_Score)))
 cat(paste0("Insample:\nAbsolute error: ", ame,
              "\nRMSE: ",rmse))
  
@@ -185,7 +187,7 @@ false_positive <- proportion_data_neg %>% filter(Neg == 1, correct_neg == 0) %>%
 
 recall_neg <- true_positive / (true_positive + false_negative)
 precision_neg <- true_positive / (true_positive + false_positive)
-f1_score_neg <- 2 * (precision * recall) / (precision + recall)
+f1_score_neg <- 2 * (precision_neg * recall_neg) / (precision_neg + recall_neg)
 
 
 # Calculate Recall and F1 Score
@@ -195,7 +197,7 @@ false_positive <- proportion_data_pos %>% filter(Pos == 1, correct_pos == 0) %>%
 
 recall_pos <- true_positive / (true_positive + false_negative)
 precision_pos <- true_positive / (true_positive + false_positive)
-f1_score_pos <- 2 * (precision * recall) / (precision + recall)
+f1_score_pos <- 2 * (precision_pos * recall_pos) / (precision_pos + recall_pos)
 
 
 # Plot the proportions as a 2x2 matrix
@@ -264,11 +266,15 @@ interaction_summary <- coefficients_table[grep(":", rownames(coefficients_table)
                                                         tendency = Pos-Neg) 
 
  
- p1 = time_effct %>% ggplot(aes(x=Name, y= Estimate, colour = as.factor(tendency))) + geom_point() +
+ p1 = 
+ time_effct %>% ggplot(aes(x=Name, y= Estimate, colour = as.factor(tendency))) + geom_point() +
    geom_pointrange(aes(ymin = Estimate - (Std..Error*2) ,ymax= Estimate + (Std..Error*2)),alpha=0.2) + 
-   coord_flip() + geom_hline(yintercept = 0) + theme(legend.position = "top") +
-  annotate("text", x = Inf, y = Inf, label = paste("Mean Pos:", round(mean(time_effct$Pos), 2)), hjust = 1.1, vjust = 2, size = 4, color = "blue") +
-  annotate("text", x = Inf, y = Inf, label = paste("Mean Neg:", round(mean(time_effct$Neg), 2)), hjust = 1.1, vjust = 3.5, size = 4, color = "red")
+   coord_flip() + geom_hline(yintercept = 0) + theme(legend.position = "None") +
+   scale_color_manual(values=c("#F8766D", "#56B4E9", "#7CAE00")) + 
+  annotate("text", x = Inf, y = Inf, label = paste("Positive trend:", round(mean(time_effct$Pos), 2)), hjust = 1, vjust = 2+3, size = 4, color = "#7CAE00") +
+  annotate("text", x = Inf, y = Inf, label = paste("No clear trend:", round(mean(time_effct$tendency==0), 2)), hjust = 1, vjust = 3.5+3, size = 4, color = "#56B4E9") +
+  annotate("text", x = Inf, y = Inf, label = paste("Negative trend:", round(mean(time_effct$Neg), 2)), hjust = 1, vjust = 5+3, size = 4, color = "#F8766D") 
+
  
  past_average <- Hotel_Reviews %>% filter(time_ref<0) %>% group_by(Hotel_Name) %>% summarise(past_average = mean(Reviewer_Score))
 
@@ -358,13 +364,13 @@ library(shiny)
 library(DT)
 
 
-test_window = expand.grid(Hotel_Name = unique(test_data$Hotel_Name), time_ref = seq(min(detection_data$time_ref), max(test_data$time_ref),0.2), Reviewer_Score2 =NA)
-#detection_data2 = detection_data2 %>% mutate(Estimate = NA)
-detection_data2 = detection_data2 %>% mutate(Reviewer_Score2 = Reviewer_Score)
+test_window = expand.grid(Hotel_Name = unique(test_data$Hotel_Name), time_ref = seq(min(train_data$time_ref), max(test_data$time_ref),0.2), Reviewer_Score2 =NA)
+#train_data2 = train_data2 %>% mutate(Estimate = NA)
+train_data2 = train_data2 %>% mutate(Reviewer_Score2 = Reviewer_Score)
 test_window$Estimate = predict(fit, newdata = test_window)
 
 
-plot_data = detection_data2
+plot_data = train_data2
 
 hotel_names <- unique(plot_data$Hotel_Name)
 ```
