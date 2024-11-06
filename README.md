@@ -15,6 +15,7 @@ Here we want to better inform consumers by developing a Google Chrome extension 
 2. Score Predictor: which predicts the near future review scores and therefore a fairer evaluation of the hotel.
 3. Reason Extractor. An NLP model that identifies reviews that are associated with detrending hotels, thereby providing additional insights.
 
+This could look like this:
 <img src="pics/Hotel_example.png" width="60%">
 
 
