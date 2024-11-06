@@ -1,7 +1,11 @@
 # Hotel Review project
 
+This project analyses Hotel Reviews and identifyies whether the scroing of a hotel is stable increasing or decreasing and provides review summaries.
 
-Project to analyse Hotel Reviews and identifying whether the scring of a hotel is stable increasing or decreasing.
+
+![Alt text](Booking_page.png)
+
+_________________________________________________________________________________________________________
 
 # First explorative data
 I first try to make a prototype with data from kaggle:
