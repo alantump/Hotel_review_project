@@ -78,6 +78,15 @@ Once trained, this model should accurately identify relevant reviews for a hotel
 
 Reviews have been summarized using Large Language Model and the output is showing possible reasons for deteriorating the score, e.g.:
 
+Hotel X:
+
 - Angry, post made available for public
 - Room dirty, afraid to walk barefoot
 - No staff to assist with luggage
+
+Hotel Y:
+
+- No trolley or staff for luggage assistance
+- Hotel looks like 3-star, not 4
+- AC was useless during hot week
+- Free Wi-Fi didn't work on 3rd floor
