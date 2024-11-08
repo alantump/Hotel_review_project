@@ -67,4 +67,13 @@ Note that in this picture I set the sensetivity very low resulting in only a few
 Overall, this doesn't perform very well and should be improved further. 
 
 
+Once we have reasonable categorizations (deteroating, stable improving) we can train a model to identify reviews typically found in hotes of these classes:
+
+| Hotel | Reviews (feature)    | Class (target)    |
+| :---:   | :---: | :---: |
+| "A" | "Breakfirst could start earlier" | "Stable"   |
+| "B" | ""Disappointed!. We asked for up grade but not available" | "Improving"   |
+| "C" | "There is a musty smell in the corridors"   | "Deteroating" |
+
+Once trained, this model should accurately identify relevant reviews for a hotel that is either deteriorating or improving.
 
