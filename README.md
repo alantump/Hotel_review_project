@@ -1,5 +1,7 @@
 # Hotel Review Project
 
+Booking.com is one of the largest online travel agencies and under the top 100 most visited websites of the world. Customers booked in more than a billion (10^9) nights on booking. Thus, improving aiding the booking and hotel choice procedure has the potential to improve a huge number of customers. 
+
 This, or something similar, is what you see when you try to book a hotel on booking.com.
 The most important information people use when booking a hotel is the room price, followed by the customer rating.
 
@@ -13,11 +15,9 @@ Here we want to better inform consumers by developing a Google Chrome extension 
 
 1. Trend Detector: which identifies hotels that have deteriorating review scores. The scores of these hotels are too high and should be used with caution.
 2. Score Predictor: which predicts the near future review scores and therefore a fairer evaluation of the hotel.
-3. Reason Extractor. An NLP model that identifies reviews that are associated with detrending hotels, thereby providing additional insights.
-
-This could look like this:
-
-<img src="pics/Hotel_example.png" width="60%">
+3. A Rag-system allowing the customer to ask questions about a specific hotel (e.g., How is the internet connection?) or generally Hotels in an area (Which hotels have good beds?).
+4. Bonus: Reason Extractor. An NLP model that identifies reviews that are associated with deteriorating hotels, thereby providing additional insights.
+5. Bonus: A Recommendation system allowing to find similar Hotels.
 
 ---
 
@@ -25,6 +25,7 @@ In the current phase consists of two main goals.
 
 1. I first try to make a prototype with data from kaggle:
    https://www.kaggle.com/datasets/jiashenliu/515k-hotel-reviews-data-in-europe
+
 
 2. Scraping
    /Scraping contains a python file 'run.py' which scrapes reviews from booking.com. Important arguments it needs are hotel name as in the URL and the country code (e.g., us, de etc.).
