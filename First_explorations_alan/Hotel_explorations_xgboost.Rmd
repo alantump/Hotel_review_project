@@ -1,0 +1,175 @@
+---
+title: "Hotel_exploration"
+author: "Alan"
+date: "2024-10-19"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(brms)
+library(ggplot2)
+library(lme4)
+library(lubridate)
+library(stringr)
+library(cowplot)
+library(shiny)
+```
+
+## R Markdown
+
+
+```{r cars}
+shiny_t = F #load shiny stuff?
+source("functions.R")
+
+Hotel_Reviews <- data_loader()
+
+
+# Filter hotels with at least 500 reviews
+Hotel_Reviews <- Hotel_Reviews %>%
+  group_by(Hotel_Name) %>%
+  filter(n() >= 500) %>%
+  ungroup()
+
+
+```
+Base data
+```{r}
+dim(Hotel_Reviews)
+length(unique(Hotel_Reviews$Hotel_Name))
+```
+
+
+
+```{r}
+trip_time = 356 #day 
+trip_start = max(Hotel_Reviews$date_object)-trip_time 
+booking_time = trip_start
+attention_window = 356 
+
+
+Hotel_Reviews = Hotel_Reviews %>% mutate(time_ref = as.numeric(date_object- booking_time)/30.5)
+
+
+y = Hotel_Reviews %>%  filter(date_object > (booking_time-attention_window)) %>%
+                                    mutate(group = ifelse(date_object < booking_time, "before", "after"))
+
+
+
+```
+
+```{r}
+library(dplyr)
+library(tidyr)
+
+
+my_data = Hotel_Reviews %>%
+  filter(date_object > (booking_time - attention_window))
+
+
+my_data <- my_data %>%
+  mutate(time_ref = as.numeric(date_object - booking_time) / 30.5)
+
+# Step 1: Calculate Monthly Averages
+my_data <- my_data %>%
+  mutate(Month = round(time_ref))  # Convert days to months
+
+monthly_avg_data <- my_data %>% filter( time_ref <0) %>%
+  group_by(Hotel_Name, Month) %>%
+  summarize(Monthly_Avg_Score = mean(Reviewer_Score, na.rm = TRUE)) %>%
+  ungroup()
+
+
+y <- my_data %>%
+  mutate(group = ifelse(date_object < booking_time, "before", "after"))
+
+y <- y %>%
+  group_by(Hotel_Name, group) %>%
+  summarize(m = mean(Reviewer_Score, na.rm = TRUE)) %>%
+  pivot_wider(names_from = group, values_from = m) %>%
+  mutate(difference = after - before) %>%
+  select(Hotel_Name, difference)
+
+# Step 3: Merge Monthly Averages with Differences
+final_data <- monthly_avg_data %>%
+  pivot_wider(names_from = Month, values_from = Monthly_Avg_Score) %>%
+  left_join(y, by = "Hotel_Name")
+
+
+# Step 3: Merge Monthly Averages with Differences
+final_data <- monthly_avg_data %>%
+  pivot_wider(names_from = Month, values_from = Monthly_Avg_Score) %>%
+  left_join(y, by = "Hotel_Name")
+
+
+# Print the final result
+hist(final_data$difference)
+```
+
+
+```{r}
+# Load necessary libraries
+library(xgboost)
+library(dplyr)
+
+hotel_data = final_data  %>% drop_na()
+# Assuming your data frame is named 'hotel_data'
+# Convert the data to a matrix format
+features <- as.matrix(hotel_data[, 2:14])  # Columns -12 to 0
+labels <- hotel_data$difference
+
+# Split data into training and testing sets
+set.seed(123)  # For reproducibility
+train_indices <- sample(1:nrow(hotel_data), size = 0.75 * nrow(hotel_data))
+train_features <- features[train_indices, ]
+train_labels <- labels[train_indices]
+test_features <- features[-train_indices, ]
+test_labels <- labels[-train_indices]
+
+# Convert to DMatrix format for XGBoost
+dtrain <- xgb.DMatrix(data = train_features, label = train_labels)
+dtest <- xgb.DMatrix(data = test_features, label = test_labels)
+
+# Set parameters for XGBoost
+params <- list(
+  objective = "reg:squarederror",
+  eval_metric = "rmse",
+  max_depth = 5
+)
+
+# Train the XGBoost model
+xgb_model <- xgb.train(
+  params = params,
+  data = dtrain,
+  nrounds = 200,
+  watchlist = list(train = dtrain, eval = dtest),
+  early_stopping_rounds = 10,
+  verbose = 1
+  
+)
+
+# Make predictions
+train_predictions <- predict(xgb_model, newdata = train_features)
+test_predictions <- predict(xgb_model, newdata = test_features)
+
+# Calculate RMSE for training and testing sets
+train_rmse <- sqrt(mean((train_labels - train_predictions)^2))
+test_rmse <- sqrt(mean((test_labels - test_predictions)^2))
+h0_rmse <- sqrt(mean((test_labels - mean(train_labels))^2))
+h0_test_rmse <- sqrt(mean((mean(train_labels) - test_predictions)^2))
+
+cat("Training RMSE:", train_rmse, "\n")
+cat("Testing RMSE:", test_rmse, "\n")
+cat("Testing_h0 RMSE:", h0_rmse, "\n")
+```
+
+
+```{r}
+
+cor.test(train_labels,train_predictions)
+cor.test(test_labels,test_predictions)
+
+
+```
+

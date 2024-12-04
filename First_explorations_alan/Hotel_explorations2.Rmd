@@ -57,6 +57,16 @@ train_data = Hotel_Reviews %>% filter(date_object < booking_time &
 
 test_data = Hotel_Reviews %>% filter(date_object > trip_start &
                                             date_object < (trip_start+trip_time) )
+
+
+
+my_data = Hotel_Reviews %>%
+  filter(date_object > (booking_time - attention_window))
+
+
+my_data <- my_data %>%
+  mutate(group = ifelse(date_object < booking_time, "before", "after"))
+
 ```
 
 
@@ -64,12 +74,8 @@ test_data = Hotel_Reviews %>% filter(date_object > trip_start &
 
 
 
-dummy = Hotel_Reviews %>% filter( date_object > (booking_time-attention_window) ) %>% mutate(group = ifelse(date_object > trip_start,"after", "before"))
-
-
-
 fit = lm(
-   Reviewer_Score ~ 0 +  Hotel_Name * group:Hotel_Name, data = dummy)
+   Reviewer_Score ~ 0 +  Hotel_Name * group:Hotel_Name, data = my_data)
 
 ```
 
@@ -93,7 +99,7 @@ coefficients_table <- model_summary$coefficients
 interaction_summary <- coefficients_table[grep(":", rownames(coefficients_table)), ]
 
 
- time_effct = data.frame(interaction_summary) %>% mutate(Name= rownames(.),
+ time_effct2 = data.frame(interaction_summary) %>% mutate(Name= rownames(.),
                                                          Name = stringr::str_replace(Name, c("Hotel_Name"),""),
                                                          Name = stringr::str_replace(Name, c(":time_ref"),"")) %>%
    arrange(Estimate) %>%
@@ -102,7 +108,7 @@ interaction_summary <- coefficients_table[grep(":", rownames(coefficients_table)
                                                         tendency = Pos-Neg) 
 
  
- time_effct %>% ggplot(aes(x=Name, y= Estimate, colour = as.factor(tendency))) + geom_point() +
+ time_effct2 %>% ggplot(aes(x=Name, y= Estimate, colour = as.factor(tendency))) + geom_point() +
    geom_pointrange(aes(ymin = Estimate - (Std..Error*2) ,ymax= Estimate + (Std..Error*2)),alpha=0.2) + 
    coord_flip() + geom_hline(yintercept = 0) + theme(legend.position = "None") +
    scale_color_manual(values=c("#F8766D", "#56B4E9", "#7CAE00")) + 
@@ -131,7 +137,6 @@ model_summary <- summary(fit)
 
 
 ```{r}
-
 t_threshold =  qt(0.8,Inf)
 
 
@@ -158,12 +163,16 @@ interaction_summary <- coefficients_table[grep(":", rownames(coefficients_table)
    scale_color_manual(values=c("#F8766D", "#56B4E9", "#7CAE00")) + 
   annotate("text", x = Inf, y = Inf, label = paste("Positive trend:", round(mean(time_effct$Pos), 2)), hjust = 1, vjust = 2+3, size = 4, color = "#7CAE00") +
   annotate("text", x = Inf, y = Inf, label = paste("No clear trend:", round(mean(time_effct$tendency==0), 2)), hjust = 1, vjust = 3.5+3, size = 4, color = "#56B4E9") +
-  annotate("text", x = Inf, y = Inf, label = paste("Negative trend:", round(mean(time_effct$Neg), 2)), hjust = 1, vjust = 5+3, size = 4, color = "#F8766D") 
+  annotate("text", x = Inf, y = Inf, label = paste("Negative trend:", round(mean(time_effct$Neg), 2)), hjust = 1, vjust = 5+3, size = 4, color = "#F8766D")
+```
 
- 
- 
- 
- 
+
+```{r}
+
+mean(time_effct$Neg ==time_effct2$Neg)
+mean(time_effct$Pos ==time_effct2$Pos)
+mean(time_effct$tendency ==time_effct2$tendency)
+
 ```
 
 

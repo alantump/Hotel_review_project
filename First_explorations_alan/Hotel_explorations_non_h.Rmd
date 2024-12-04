@@ -1,0 +1,226 @@
+---
+title: "Hotel_exploration"
+author: "Alan"
+date: "2024-10-19"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(brms)
+library(ggplot2)
+library(lme4)
+library(lubridate)
+library(stringr)
+library(cowplot)
+library(shiny)
+```
+
+## R Markdown
+
+
+```{r cars}
+shiny_t = F #load shiny stuff?
+source("functions.R")
+
+Hotel_Reviews <- data_loader()
+
+
+# Filter hotels with at least 500 reviews
+Hotel_Reviews <- Hotel_Reviews %>%
+  group_by(Hotel_Name) %>%
+  filter(n() >= 200) %>%
+  ungroup()
+
+
+```
+Base data
+```{r}
+dim(Hotel_Reviews)
+length(unique(Hotel_Reviews$Hotel_Name))
+```
+
+
+
+```{r}
+trip_time = 356 #day 
+trip_start = max(Hotel_Reviews$date_object)-trip_time 
+booking_time = trip_start
+attention_window = 356 
+
+Hotel_Reviews = Hotel_Reviews %>% mutate(time_ref = as.numeric(date_object- booking_time)/30.5)
+
+
+my_data = Hotel_Reviews %>%
+  filter(date_object > (booking_time - attention_window))
+
+
+my_data <- my_data %>%
+  mutate(time_ref = as.numeric(date_object - booking_time) / 30.5)
+
+# Step 1: Calculate Monthly Averages
+my_data <- my_data %>%
+  mutate(Month = round(time_ref))  # Convert days to months
+
+monthly_avg_data <- my_data %>% filter( time_ref <0) %>%
+  group_by(Hotel_Name, Month) %>%
+  summarize(Monthly_Avg_Score = mean(Reviewer_Score, na.rm = TRUE)) %>%
+  ungroup()
+
+
+y <- my_data %>%
+  mutate(group = ifelse(date_object < booking_time, "before", "after"))
+
+```
+
+
+```{r}
+
+fit = lm(
+   Reviewer_Score ~ 0 +  Hotel_Name * group:Hotel_Name, data = y)
+
+
+```
+
+
+
+```{r pressure}
+
+all_coefficients = coef(fit)
+model_summary <- summary(fit)
+#fit = strip_lm(fit)
+
+
+t_threshold =  qt(0.8,Inf)
+
+
+
+# Extract the coefficients table
+coefficients_table <- model_summary$coefficients
+
+# Extract only the interaction terms
+interaction_summary <- coefficients_table[grep(":", rownames(coefficients_table)), ]
+
+
+ time_effct = data.frame(interaction_summary) %>% mutate(Name= rownames(.),
+                                                         Name = stringr::str_replace(Name, c("Hotel_Name"),""),
+                                                         Name = stringr::str_replace(Name, c(":time_ref"),"")) %>%
+   arrange(Estimate) %>%
+  mutate(Name = factor(Name, levels = Name)) %>% mutate(Pos = ifelse(t.value>t_threshold, 1, 0),
+                                                        Neg = ifelse(t.value<(-t_threshold), 1, 0),
+                                                        tendency = Pos-Neg) 
+
+ 
+ time_effct %>% ggplot(aes(x=Name, y= Estimate, colour = as.factor(tendency))) + geom_point() +
+   geom_pointrange(aes(ymin = Estimate - (Std..Error*2) ,ymax= Estimate + (Std..Error*2)),alpha=0.2) + 
+   coord_flip() + geom_hline(yintercept = 0) + theme(legend.position = "None") +
+   scale_color_manual(values=c("#F8766D", "#56B4E9", "#7CAE00")) + 
+  annotate("text", x = Inf, y = Inf, label = paste("Positive trend:", round(mean(time_effct$Pos), 2)), hjust = 1, vjust = 2+3, size = 4, color = "#7CAE00") +
+  annotate("text", x = Inf, y = Inf, label = paste("No clear trend:", round(mean(time_effct$tendency==0), 2)), hjust = 1, vjust = 3.5+3, size = 4, color = "#56B4E9") +
+  annotate("text", x = Inf, y = Inf, label = paste("Negative trend:", round(mean(time_effct$Neg), 2)), hjust = 1, vjust = 5+3, size = 4, color = "#F8766D") 
+
+ 
+
+
+```
+
+
+
+```{r pressure}
+time_effct$ExtractedName <- sub("Hotel_Name", "", time_effct$Name)
+time_effct$ExtractedName <- sub(":groupbefore", "", time_effct$ExtractedName)
+
+time_effct$Hotel_Name = time_effct$ExtractedName
+
+dummy = data.frame(Hotel_Name = time_effct$ExtractedName, Neg= time_effct$Neg)
+
+result <- merge(y, dummy, by.x = "Hotel_Name", by.y = "Hotel_Name", all.x = TRUE)
+
+
+```
+
+
+
+```{r}
+
+library(tidyr)
+
+
+y <- result %>%
+  group_by(Hotel_Name, group) %>%
+  summarize(m = mean(Reviewer_Score, na.rm = TRUE)) %>%
+  pivot_wider(names_from = group, values_from = m) %>%
+  mutate(difference = after - before) %>%
+  select(Hotel_Name, difference)
+
+# Step 3: Merge Monthly Averages with Differences
+final_data <- monthly_avg_data %>%
+  pivot_wider(names_from = Month, values_from = Monthly_Avg_Score) %>%
+  left_join(time_effct, by = "Hotel_Name")
+
+
+
+```
+
+```{r}
+# Load necessary libraries
+library(xgboost)
+library(dplyr)
+library(caret)
+
+hotel_data = final_data  %>% drop_na()
+# Assuming your data frame is named 'hotel_data'
+# Convert the data to a matrix format
+features <- as.matrix(hotel_data[, 2:14])  # Columns -12 to 0
+labels <- hotel_data$Neg
+
+# Split data into training and testing sets
+set.seed(123)  # For reproducibility
+train_indices <- sample(1:nrow(hotel_data), size = 0.8 * nrow(hotel_data))
+train_features <- features[train_indices, ]
+train_labels <- labels[train_indices]
+test_features <- features[-train_indices, ]
+test_labels <- labels[-train_indices]
+
+# Convert to DMatrix format for XGBoost
+dtrain <- xgb.DMatrix(data = train_features, label = train_labels)
+dtest <- xgb.DMatrix(data = test_features, label = test_labels)
+
+# Set parameters for XGBoost
+params <- list(
+  objective = "binary:logistic",  # Change to binary classification
+  eval_metric = "logloss",        # Common metric for binary classification
+  max_depth = 2
+)
+
+# Train the XGBoost model
+xgb_model <- xgb.train(
+  params = params,
+  data = dtrain,
+  nrounds = 200,
+  watchlist = list(train = dtrain, eval = dtest),
+  early_stopping_rounds = 10,
+  verbose = 1
+)
+
+# Make predictions
+train_predictions <- predict(xgb_model, newdata = train_features)
+test_predictions <- predict(xgb_model, newdata = test_features)
+
+
+cm <- confusionMatrix(as.factor(round(train_predictions)), as.factor(train_labels))
+f1_score_train <- cm$byClass["F1"]
+
+
+cm <- confusionMatrix(as.factor(round(test_predictions)), as.factor(test_labels))
+f1_score_test <- cm$byClass["F1"]
+
+cm <- confusionMatrix(factor(rep(0,length(test_labels)), levels = c("0","1")), as.factor(test_labels))
+f1_h0 <- cm$byClass["F1"]
+
+
+cat("Training F1:", f1_score_train, "\n")
+cat("Testing F1:", f1_score_test, "\n")
+cat("F1 H0:", f1_h0, "\n")
+```
+
