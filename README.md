@@ -19,6 +19,12 @@ Here we want to better inform consumers by developing a Google Chrome extension 
 4. Bonus: Reason Extractor. An NLP model that identifies reviews that are associated with deteriorating hotels, thereby providing additional insights.
 5. Bonus: A Recommendation system allowing to find similar Hotels.
 
+
+Why?
+
+Nr. 4:
+By training a machine learning model to predict a hotel's overall rating based on its reviews, we can pinpoint specific reviews that significantly impact this rating. Extracting this reviews allows the consumer to make more informed decisions when booking accommodations.
+
 ---
 
 In the current phase consists of two main goals.

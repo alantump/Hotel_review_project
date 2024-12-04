@@ -3,6 +3,7 @@
 .RData
 .Ruserdata
 .rds 
+.env
 
-Data/Hotel_Reviews.csv
-
+Data/Hotel_Reviews.csv 
+reviews_most_relevant.csv 
