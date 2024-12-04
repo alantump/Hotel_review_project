@@ -5,5 +5,7 @@
 .rds 
 .env
 
+*.log
+
 Data/Hotel_Reviews.csv 
 reviews_most_relevant.csv 
