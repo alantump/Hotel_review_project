@@ -91,3 +91,42 @@ Hotel Y:
 - Hotel looks like 3-star, not 4
 - AC was useless during hot week
 - Free Wi-Fi didn't work on 3rd floor
+
+
+
+
+# Discussion 04.12.2024
+
+MVP: 
+1. Trenddetector
+2. Rag allowing for costum queris about hotels
+3 Streamlit
+
+Start:
+- time series analysis on friday. Goal: a decent predictor.
+
+Bonus: Build a a database
+Bonus: Chrome extension
+Bonus: Reason Extractor. An NLP model that identifies reviews that are associated with deteriorating hotels, thereby providing additional insights.
+Bonus: Summarization of hotel reviews.
+
+
+
+
+# Keys
+
+
+
+Create a file named `.env` in the root directory of this project and save your openai key there:
+
+```plaintext
+# .env
+OPENAI_API_KEY=your_openai_api_key_here
+```
+The `.gitignore` file has `.env` included, thus it should be save.
+
+
+
+
+
+
