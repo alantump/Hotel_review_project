@@ -101,23 +101,6 @@ Hotel Y:
 
 
 
-# Discussion 04.12.2024
-
-MVP: 
-1. Trenddetector
-2. Rag allowing for costum queris about hotels
-3 Streamlit
-
-Start:
-- time series analysis on friday. Goal: a decent predictor.
-
-Bonus: Build a a database
-Bonus: Chrome extension
-Bonus: Reason Extractor. An NLP model that identifies reviews that are associated with deteriorating hotels, thereby providing additional insights.
-Bonus: Summarization of hotel reviews.
-
-
-
 
 # Keys
 
