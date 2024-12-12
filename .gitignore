@@ -8,6 +8,7 @@
 *.log
 *.json
 
-
+First_explorations_alan/Chroma/
 Data/Hotel_Reviews.csv 
 reviews_most_relevant.csv 
+*.csv 

@@ -1,0 +1,180 @@
+---
+title: "Hotel_exploration"
+author: "Alan"
+date: "2024-10-19"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(brms)
+library(ggplot2)
+library(lme4)
+library(lubridate)
+library(stringr)
+library(cowplot)
+library(shiny)
+```
+
+## R Markdown
+
+
+```{r cars}
+shiny_t = F #load shiny stuff?
+source("functions.R")
+
+Hotel_Reviews <- data_loader()
+
+
+# Filter hotels with at least 500 reviews
+Hotel_Reviews <- Hotel_Reviews %>%
+  group_by(Hotel_Name) %>%
+  filter(n() >= 200, Country=="United Kingdom") %>%
+  ungroup()
+
+
+```
+Base data
+```{r}
+dim(Hotel_Reviews)
+length(unique(Hotel_Reviews$Hotel_Name))
+```
+
+
+
+```{r}
+trip_time = 356 #day 
+trip_start = max(Hotel_Reviews$date_object)-trip_time 
+booking_time = trip_start
+attention_window = 356 
+
+
+Hotel_Reviews = Hotel_Reviews %>% mutate(time_ref = as.numeric(date_object- booking_time)/30.5)
+
+train_data = Hotel_Reviews %>% filter(date_object < booking_time &
+                                            date_object > (booking_time-attention_window) )
+
+
+test_data = Hotel_Reviews %>% filter(date_object > trip_start &
+                                            date_object < (trip_start+trip_time) )
+
+
+
+my_data = Hotel_Reviews %>%
+  filter(date_object > (booking_time - attention_window))
+
+
+my_data <- my_data %>%
+  mutate(group = factor(ifelse(date_object < booking_time, "before", "after"), levels=c("before", "after")))
+
+```
+
+
+```{r}
+#install.packages("prophet")
+
+
+my_data2 = my_data %>% filter(Hotel_Name == sample(my_data$Hotel_Name,1)) %>%
+  select(date_object,Reviewer_Score)
+
+library(prophet)
+
+# Fit the model
+m <- prophet(my_data %>% mutate(ds = date_object, y =Reviewer_Score) %>% filter(group=="before"),changepoint.prior.scale = 0.0005)
+
+# Make future dataframe for predictions
+future <- make_future_dataframe(m, periods = 365) # Predict for the next 30 days
+
+# Forecast
+forecast <- predict(m, future)
+
+# Plot the forecast
+plot(m, forecast)
+# Access the model parameters
+params <- m$params
+
+# Extract the beta parameters
+beta <- params$beta
+
+# View the beta parameters
+print(beta)
+prophet_plot_components(m, forecast)
+
+#summary(lm(y ~ ds, data=my_data %>% mutate(ds = date_object, y =Reviewer_Score)))
+
+```
+```{r}
+# Install and load the forecast package if you haven't already
+library(forecast)
+
+# Example time series data (replace this with your actual data)
+ratings <- ts(c(8.5, 9.0, 7.5, 8.0, 8.2, 8.8, 9.1, 7.9, 8.3, 8.7), frequency = 12)
+
+# Example external predictors (replace with your actual predictors)
+# Ensure that the length of predictors matches the length of the time series
+predictors <- data.frame(
+  predictor1 = c(1.2, 1.5, 1.3, 1.4, 1.6, 1.7, 1.8, 1.5, 1.6, 1.7),
+  predictor2 = c(2.1, 2.2, 2.0, 2.3, 2.4, 2.5, 2.6, 2.3, 2.4, 2.5)
+)
+
+# Fit an ARIMAX model
+fit <- auto.arima(ratings, xreg = as.matrix(predictors))
+
+# Print the model summary
+summary(fit)
+
+# Forecast the next 5 periods with new predictor values
+new_predictors <- as.matrix(data.frame(
+  predictor1 = c(1.8, 1.9, 2.0, 2.1, 2.2),
+  predictor2 = c(2.6, 2.7, 2.8, 2.9, 3.0)))
+
+forecasted_values <- forecast(fit, xreg = new_predictors, h = 5)
+
+# Print the forecasted values
+print(forecasted_values)
+
+# Plot the forecast
+plot(forecasted_values)
+```
+```{r}
+library(forecast)
+
+
+
+
+my_data2 = my_data %>% filter(Hotel_Name == sample(my_data$Hotel_Name,1)) %>%
+  select(date_object,Reviewer_Score)
+
+
+# Fit an ARIMA model to the data
+fit <- auto.arima(my_data2$Reviewer_Score)
+time_index <- 1:length(my_data2$Reviewer_Score)
+# Obtain the fitted values from the ARIMA model
+fitted_values <- fitted(fit)
+
+# Fit a linear model to the fitted values
+linear_trend_model <- lm(fitted_values ~ time_index)
+
+# Print the summary of the linear model
+
+# Extract the slope
+slope <- coef(linear_trend_model)[2]
+print(slope)
+
+# Determine trend direction
+if (slope > 0) {
+  print("The trend is positive.")
+} else if (slope < 0) {
+  print("The trend is negative.")
+} else {
+  print("There is no trend.")
+}
+
+
+
+summary(linear_trend_model)
+summary(lm(my_data2$Reviewer_Score~ my_data2$date_object))
+
+
+```
+

@@ -14,6 +14,12 @@ library(lubridate)
 library(stringr)
 library(cowplot)
 library(shiny)
+library(cometr)
+API_KEY <- "pcOr85uynDSQ04qdJbfis288K"
+exp <- create_experiment(experiment_name = "All_basis",#"",
+                         project_name = "Booking_LM_prophet_real",
+                         workspace_name = "alantump",
+                         api_key = API_KEY)
 ```
 
 ## R Markdown
@@ -23,7 +29,7 @@ library(shiny)
 shiny_t = F #load shiny stuff?
 source("functions.R")
 
-Hotel_Reviews <- data_loader()
+Hotel_Reviews <- data_loader("real")
 
 
 # Filter hotels with at least 500 reviews
@@ -31,12 +37,21 @@ Hotel_Reviews <- Hotel_Reviews %>%
   group_by(Hotel_Name) %>%
   filter(n() >= 200) %>% #, Country=="United Kingdom"
   ungroup()
-min_number=200
+min_number = 100
 
 
 t_threshold_slope =  qt(0.8,Inf)
 t_threshold =  qt(0.9,Inf) #not used
+dif_treshold =  0.2 # used
+attention_window = 356 #past
+trip_time = 356 #days future
 
+
+exp$log_parameter("dif_treshold", dif_treshold)
+exp$log_parameter("t_threshold_slope", t_threshold_slope)
+exp$log_parameter("min_number", min_number)
+exp$log_parameter("attention_window", attention_window)
+exp$log_parameter("trip_time", trip_time)
 
 ```
 Base data
@@ -48,10 +63,8 @@ length(unique(Hotel_Reviews$Hotel_Name))
 
 
 ```{r}
-trip_time = 356/2 #day 
 trip_start = max(Hotel_Reviews$date_object)-trip_time 
 booking_time = trip_start
-attention_window = 356*2 
 
 
 my_data = Hotel_Reviews %>%
@@ -68,7 +81,7 @@ keep_Hotels = my_data %>% group_by(group,Hotel_Name) %>% tally() %>%
 Hotel_Reviews = Hotel_Reviews %>% mutate(time_ref = as.numeric(date_object- booking_time)/30.5) %>%
   filter(Hotel_Name %in% keep_Hotels$Hotel_Name)
 
-my_data %>%
+my_data = my_data %>%
   filter(Hotel_Name %in% keep_Hotels$Hotel_Name)
 
 
@@ -186,31 +199,30 @@ coefficients_table <- model_summary$coefficients
 interaction_summary <- coefficients_table[grep(":", rownames(coefficients_table)), ]
 
 
- time_effct2 = data.frame(interaction_summary) %>% mutate(Name= rownames(.),
+ time_effct_dif = data.frame(interaction_summary) %>% mutate(Name= rownames(.),
                                                          Name = stringr::str_replace(Name, c("Hotel_Name"),""),
                                                          Name = stringr::str_replace(Name, c(":groupafter"),"")) %>%
    arrange(Estimate) %>%
   mutate(Name = factor(Name, levels = Name)) %>% mutate(Pos = ifelse(t.value>t_threshold & abs(Estimate)>0.1, 1, 0),
                                                         Neg = ifelse(t.value<(-t_threshold) & abs(Estimate)>0.1, 1, 0),
                                                         tendency = Pos-Neg) 
- time_effct2 = data.frame(interaction_summary) %>% mutate(Name= rownames(.),
+ time_effct_dif = data.frame(interaction_summary) %>% mutate(Name= rownames(.),
                                                          Name = stringr::str_replace(Name, c("Hotel_Name"),""),
                                                          Name = stringr::str_replace(Name, c(":groupafter"),"")) %>%
    arrange(Estimate) %>%
-  mutate(Name = factor(Name, levels = Name)) %>% mutate(Pos = ifelse(Estimate>0.2, 1, 0),
-                                                        Neg = ifelse(Estimate< (-0.2), 1, 0),
+  mutate(Name = factor(Name, levels = Name)) %>% mutate(Pos = ifelse(Estimate>dif_treshold, 1, 0),
+                                                        Neg = ifelse(Estimate< (-dif_treshold), 1, 0),
                                                         tendency = Pos-Neg) 
  
- time_effct2 %>% ggplot(aes(x=Name, y= Estimate, colour = as.factor(tendency))) + geom_point() +
+ time_effct_dif %>% ggplot(aes(x=Name, y= Estimate, colour = as.factor(tendency))) + geom_point() +
    geom_pointrange(aes(ymin = Estimate - (Std..Error*2) ,ymax= Estimate + (Std..Error*2)),alpha=0.2) + 
    coord_flip() + geom_hline(yintercept = 0) + theme(legend.position = "None") +
    scale_color_manual(values=c("#F8766D", "#56B4E9", "#7CAE00")) + 
-  annotate("text", x = Inf, y = Inf, label = paste("Positive trend:", round(mean(time_effct2$Pos), 2)), hjust = 1, vjust = 2+3, size = 4, color = "#7CAE00") +
-  annotate("text", x = Inf, y = Inf, label = paste("No clear trend:", round(mean(time_effct2$tendency==0), 2)), hjust = 1, vjust = 3.5+3, size = 4, color = "#56B4E9") +
-  annotate("text", x = Inf, y = Inf, label = paste("Negative trend:", round(mean(time_effct2$Neg), 2)), hjust = 1, vjust = 5+3, size = 4, color = "#F8766D") 
+  annotate("text", x = Inf, y = Inf, label = paste("Positive trend:", round(mean(time_effct_dif$Pos), 2)), hjust = 1, vjust = 2+3, size = 4, color = "#7CAE00") +
+  annotate("text", x = Inf, y = Inf, label = paste("No clear trend:", round(mean(time_effct_dif$tendency==0), 2)), hjust = 1, vjust = 3.5+3, size = 4, color = "#56B4E9") +
+  annotate("text", x = Inf, y = Inf, label = paste("Negative trend:", round(mean(time_effct_dif$Neg), 2)), hjust = 1, vjust = 5+3, size = 4, color = "#F8766D") 
 
  
-max(time_effct2$Estimate[time_effct2$Neg==1])
 
 ```
 
@@ -264,10 +276,10 @@ interaction_summary <- coefficients_table[grep(":", rownames(coefficients_table)
 
 
 ```{r}
-time_effct2$Neg_label=time_effct2$Neg
-time_effct2$Pos_label=time_effct2$Pos
-time_effct2$tendency_label=time_effct2$tendency
-both = merge(time_effct, time_effct2 %>% select(Neg_label,Pos_label,tendency_label,Name, Estimate ), by ="Name")
+time_effct_dif$Neg_label=time_effct_dif$Neg
+time_effct_dif$Pos_label=time_effct_dif$Pos
+time_effct_dif$tendency_label=time_effct_dif$tendency
+both = merge(time_effct, time_effct_dif %>% select(Neg_label,Pos_label,tendency_label,Name, Estimate ), by ="Name")
 m_my_data = my_data %>% group_by(Hotel_Name, group) %>% summarise(m = mean(Reviewer_Score)) %>% group_by(Hotel_Name) %>% summarise(dif = m[group == "after"] - m[group=="before"]) %>% mutate(Name = Hotel_Name)
 
 both = merge(both, m_my_data %>% select(Name,dif ), by ="Name") %>% filter(abs(Estimate.x)<0.5,abs(Estimate.y)<0.5)
@@ -275,7 +287,6 @@ both = merge(both, m_my_data %>% select(Name,dif ), by ="Name") %>% filter(abs(E
 
 library(caret)
 
-confusionMatrix_h <- confusionMatrix(as.factor(rbinom(length(both$Name),1,mean(both$Neg_label))), as.factor(both$Neg_label))
 predicted = as.factor(both$Neg)
 actual =  as.factor(both$Neg_label)
 
@@ -292,6 +303,11 @@ print(paste0("D': ",calc_dprime(predicted,actual)))
 print(paste0("RD: ",mean(both$Pos_label[both$Neg==1])/mean(both$Neg_label)))
       
 
+exp$log_metric("F1", f1_score, step=1)
+exp$log_metric("Correlation", cor(both$Estimate.x,both$Estimate.y), step=1)
+exp$log_metric("Kappa", confusionMatrix$overall["Kappa"], step=1)
+exp$log_metric("Sensitivity", confusionMatrix$byClass["Sensitivity"], step=1)
+exp$log_metric("Specificity", confusionMatrix$byClass["Specificity"], step=1)
 
 ```
 
@@ -308,7 +324,7 @@ print(paste0("RD: ",mean(both$Pos_label[both$Neg==1])/mean(both$Neg_label)))
 hit = NULL
 
 threshold_slope = seq(0.7,0.99,0.02)
-threshold_dif = seq(0.6,0.99,0.02)
+threshold_dif = seq(0.6,0.99,0.05)
 grid = expand.grid(threshold_dif,threshold_slope, F1 = NA, Kappa =  NA, sensitivity = NA, Specificity=NA)
 
 for (i in 1:length(grid[,1])){
@@ -439,13 +455,13 @@ coefficients_table <- model_summary$coefficients
 interaction_summary <- coefficients_table[grep(":", rownames(coefficients_table)), ]
 
 
- time_effct_cleaned = data.frame(interaction_summary) %>% mutate(Name= rownames(.),
+ time_effct_cleaned =  data.frame(interaction_summary) %>% mutate(Name= rownames(.),
                                                          Name = stringr::str_replace(Name, c("Hotel_Name"),""),
                                                          Name = stringr::str_replace(Name, c(":time_ref"),"")) %>%
    arrange(Estimate) %>%
   mutate(Name = factor(Name, levels = Name)) %>% mutate(Pos = ifelse(t.value>t_threshold_slope, 1, 0),
                                                         Neg = ifelse(t.value<(-t_threshold_slope), 1, 0),
-                                                        tendency = Pos-Neg) 
+                                                        tendency = Pos-Neg)
 
  
  time_effct_cleaned %>% ggplot(aes(x=Name, y= Estimate, colour = as.factor(tendency))) + 
@@ -454,9 +470,9 @@ interaction_summary <- coefficients_table[grep(":", rownames(coefficients_table)
    coord_flip() +
    geom_hline(yintercept = 0) + theme(legend.position = "None") +
    scale_color_manual(values=c("#F8766D", "#56B4E9", "#7CAE00")) + 
-  annotate("text", x = Inf, y = Inf, label = paste("Positive trend:", round(mean(time_effct$Pos), 2)), hjust = 1, vjust = 2+3, size = 4, color = "#7CAE00") +
-  annotate("text", x = Inf, y = Inf, label = paste("No clear trend:", round(mean(time_effct$tendency==0), 2)), hjust = 1, vjust = 3.5+3, size = 4, color = "#56B4E9") +
-  annotate("text", x = Inf, y = Inf, label = paste("Negative trend:", round(mean(time_effct$Neg), 2)), hjust = 1, vjust = 5+3, size = 4, color = "#F8766D") + ylim(-1,1.1)
+  annotate("text", x = Inf, y = Inf, label = paste("Positive trend:", round(mean(time_effct_cleaned$Pos), 2)), hjust = 1, vjust = 2+3, size = 4, color = "#7CAE00") +
+  annotate("text", x = Inf, y = Inf, label = paste("No clear trend:", round(mean(time_effct_cleaned$tendency==0), 2)), hjust = 1, vjust = 3.5+3, size = 4, color = "#56B4E9") +
+  annotate("text", x = Inf, y = Inf, label = paste("Negative trend:", round(mean(time_effct_cleaned$Neg), 2)), hjust = 1, vjust = 5+3, size = 4, color = "#F8766D") + ylim(-1,1.1)
  
 ```
 
@@ -471,10 +487,10 @@ interaction_summary <- coefficients_table[grep(":", rownames(coefficients_table)
 
 
 
-both = merge(time_effct_cleaned, time_effct2 %>% select(Neg_label,Pos_label,tendency_label,Name, Estimate ), by ="Name")
+both = merge(time_effct_cleaned, time_effct_dif %>% select(Neg_label,Pos_label,tendency_label,Name, Estimate ), by ="Name")
 m_my_data = my_data %>% group_by(Hotel_Name, group) %>% summarise(m = mean(Reviewer_Score)) %>% group_by(Hotel_Name) %>% summarise(dif = m[group == "after"] - m[group=="before"]) %>% mutate(Name = Hotel_Name)
 
-both = merge(both, m_my_data %>% select(Name,dif ), by ="Name") %>% filter(abs(Estimate.x)<0.5,abs(Estimate.y)<0.5)
+both = merge(both, m_my_data %>% select(Name,dif ), by ="Name") 
 
 confusionMatrix_h <- confusionMatrix(as.factor(rbinom(length(both$Name),1,mean(both$Pos_label))), as.factor(both$Pos_label))
 predicted = as.factor(both$Pos)
@@ -494,7 +510,11 @@ print(paste0("D': ",calc_dprime(predicted,actual)))
 print(paste0("RD: ",mean(both$Pos_label[both$Pos==1])/mean(both$Pos_label)))
       
 
-
+exp$log_metric("F1", f1_score, step=2)
+exp$log_metric("Correlation", cor(both$Estimate.x,both$Estimate.y), step=2)
+exp$log_metric("Kappa", confusionMatrix$overall["Kappa"], step=2)
+exp$log_metric("Sensitivity", confusionMatrix$byClass["Sensitivity"], step=2)
+exp$log_metric("Specificity", confusionMatrix$byClass["Specificity"], step=2)
 
 ```
 
@@ -503,7 +523,7 @@ print(paste0("RD: ",mean(both$Pos_label[both$Pos==1])/mean(both$Pos_label)))
 
 
 threshold_slope = seq(0.7,0.99,0.02)
-threshold_dif = seq(0.6,0.99,0.02)
+threshold_dif = seq(0.6,0.99,0.05)
 grid = expand.grid(threshold_dif,threshold_slope, F1 = NA, Kappa =  NA, sensitivity = NA, Specificity=NA)
 
 for (i in 1:length(grid[,1])){
@@ -599,6 +619,10 @@ plot_grid(ggplot(grid, aes(x = Var1, y = Var2, fill = F1, z = F1)) +
   
 
 
+```
+```{r}
+exp$print()
+exp$stop()
 ```
 
 

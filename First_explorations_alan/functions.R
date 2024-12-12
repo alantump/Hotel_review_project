@@ -2,7 +2,9 @@
 
 
 
-data_loader <- function(.){
+data_loader <- function(type){
+  
+  if (type=="keggle"){
   Hotel_Reviews <- readr::read_csv("../Data/Hotel_Reviews.csv", quote =",")
   
   
@@ -14,13 +16,29 @@ data_loader <- function(.){
   }
   
   
-
   Hotel_Reviews <- Hotel_Reviews %>% mutate(time = as.numeric(as.POSIXct(Review_Date,format="%m/%d/%Y") ))
   date_object <- as.Date(Hotel_Reviews$Review_Date, format = "%m/%d/%Y")
   months <- month(date_object)
   Hotel_Reviews$date_object = date_object
   Hotel_Reviews$month = months
   Hotel_Reviews$num_date_object = as.numeric(date_object)/365
+  
+  }else{
+    Hotel_Reviews <- read.csv("../Scraping/slim_data_04_12_2024.csv")
+  
+
+    Hotel_Reviews <- Hotel_Reviews %>% mutate(time = as.numeric(as.POSIXct(Review_Date,format="%m-%d-%Y %H:%M:%S") ))
+    date_object <- as.Date(Hotel_Reviews$Review_Date, format = "%m-%d-%Y %H:%M:%S")
+    months <- month(date_object)
+    Hotel_Reviews$date_object = date_object
+    Hotel_Reviews$month = months
+    Hotel_Reviews$num_date_object = as.numeric(date_object)/365
+    
+    }
+  
+  
+  
+
   
   return(Hotel_Reviews)
 }
