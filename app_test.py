@@ -55,7 +55,6 @@ st.write(
 
 # Create 3 tabs
 tabs = st.tabs(["Global Overview", "Country Deep Dive", "Data Explorer"])
-
 with tabs[0]:
 
     user_input = st.text_input("Please enter your hotel question:")
