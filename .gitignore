@@ -12,6 +12,9 @@ First_explorations_alan/Chroma/
 Data/Hotel_Reviews.csv 
 reviews_most_relevant.csv 
 
+__pycache__
+Chroma/
+
 *.csv 
 
 Data/Hotel_Reviews.csv 

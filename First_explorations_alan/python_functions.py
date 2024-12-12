@@ -12,19 +12,10 @@ def data_loader():
 
   # Read hotel reviews data
   #Hotel_Reviews = pd.read_csv("../Data/Hotel_Reviews.csv")
-  Hotel_Reviews = pd.read_csv("../Scraping/slim_data_11_12_2024.csv")
+  Hotel_Reviews = pd.read_csv("../Scraping/crete_11_12_2024.csv")
 
 
-  # Read country data
-  countries = pd.read_csv("../Data/countries.csv")
 
-  # Add a "Country" column with NA values
-  Hotel_Reviews["Country"] = pd.NA
-
-  # Assign country based on pattern matching in Hotel_Address
-  for country_name in countries["name"]:
-    pattern = re.compile(country_name, re.IGNORECASE)  # Case-insensitive matching
-    #Hotel_Reviews.loc[Hotel_Reviews["Hotel_Address"].str.contains(pattern), "Country"] = country_name
 
  
   # Convert Review_Date to datetime and extract features
