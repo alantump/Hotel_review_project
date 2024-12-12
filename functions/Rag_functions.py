@@ -7,19 +7,18 @@ from langchain.load import dumps, loads
 from operator import itemgetter
 
 ###### Preprcess
+#import streamlit as st
+#@st.cache_data
+def get_retriever(folder_path):
+    vectorstore = Chroma(persist_directory=folder_path, embedding_function=OpenAIEmbeddings())
+    retriever = vectorstore.as_retriever()
+    print("Running retriever")
+    return retriever
 
-
-embeddingsAI = OpenAIEmbeddings()
-
-#folder_path = "./Chroma/chroma_db_reviews_crete_merged_test"
-folder_path = "./Chroma/chroma_db_reviews_crete_merged"
-vectorstore = Chroma(persist_directory=folder_path,embedding_function=embeddingsAI)
-
-retriever = vectorstore.as_retriever()
-
-
-print(asdfs)
+folder_path = "./Chroma/chroma_db_reviews_crete_merged2"
+retriever = get_retriever(folder_path)
 ####
+
 
 
 # Define a function to get unique union of documents
@@ -28,12 +27,14 @@ def get_unique_union(documents: list[list]):
     # Flatten list of lists, and convert each Document to string
     flattened_docs = [dumps(doc) for sublist in documents for doc in sublist]
     # Get unique documents
+    print("Running get_unique_union")
     unique_docs = list(set(flattened_docs))
     # Return
     return [loads(doc) for doc in unique_docs]
 
 
 def process_question(question):
+
 
 
     # Multi Query: Different Perspectives

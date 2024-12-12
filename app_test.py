@@ -15,6 +15,12 @@ api_key = os.getenv('OPENAI_API_KEY')
 from functions.Rag_functions import process_question
 
 
+# To retrieve a summary given a hotel name
+def get_summary(hotel_name):
+    with open('summarized_reviews_gr.json', 'r') as json_file:
+        summaries = json.load(json_file)
+    return summaries.get(hotel_name, "Summary not found.")
+
 
 #from model import train_and_save_model
 
@@ -59,9 +65,9 @@ with tabs[0]:
 
     user_input = st.text_input("Please enter your hotel question:")
 
-    result = process_question(user_input)
     # Display the output if the user has entered something
     if user_input:
+        result = process_question(user_input)
         st.markdown(f"""**Answer:** {result}. 
                     
                     \n Are there other questions I can Help you with?""")

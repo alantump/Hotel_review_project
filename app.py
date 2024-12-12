@@ -5,10 +5,20 @@ import pandas as pd
 import pickle
 import os
 from dotenv import load_dotenv
+from PIL import Image
+import json
 
 load_dotenv()  # Load environment variables from .env file
 api_key = os.getenv('OPENAI_API_KEY')
 from functions.Rag_functions import process_question
+
+
+# To retrieve a summary given a hotel name
+def get_summary(hotel_name):
+    with open('summarized_reviews_gr.json', 'r') as json_file:
+        summaries = json.load(json_file)
+    return summaries.get(hotel_name, "Summary not found.")
+
 
 def data_loader_light():
   """Loads data from CSV files, performs data cleaning and feature engineering.
@@ -18,7 +28,7 @@ def data_loader_light():
   """
 
   # Read hotel reviews data
-  Hotel_Reviews = pd.read_csv("Data/Hotel_Reviews.csv")
+  Hotel_Reviews = pd.read_csv("Scraping/crete_11_12_2024.csv")
 
   return Hotel_Reviews
 
@@ -57,11 +67,14 @@ tabs = st.tabs(["Tab 1", "Tab 2", "Tab 3"])
 
 # # Content for each tab
 with tabs[0]:
+    
     hotels = Hotel_Reviews["Hotel_Name"].unique()
-    selected_hotel = st.multiselect("Select a hotel to view from a dropdown or write hotel name partially to filter options:", 
-                                    hotels, 
-                                    #default="Hotel Arena", 
-                                    max_selections = 1)
+    #selected_hotel2 = st.multiselect("Select a hotel to view from a dropdown or write hotel name partially to filter options:", 
+    #                                hotels, 
+    #                                #default="Hotel Arena", 
+    #                                max_selections = 1)
+    selected_hotel = st.selectbox("Select a hotel to view from a dropdown or write hotel name partially to filter options:", 
+                                hotels, index=None)
 
     # selected_hotels = st.selectbox(
     # "How would you like to be contacted?",
@@ -71,10 +84,22 @@ with tabs[0]:
 
     
     #selected_year_range = st.slider("Select the year range", min_year, max_year, (min_year, max_year))
+    if selected_hotel is not None:
+      col1, col2 = st.columns(2)
+
+
+      with col1:
+          original_string = selected_hotel
+          no_spaces = selected_hotel.replace(" ", "")
+          image = Image.open("Data/Histograms/" + no_spaces + " .png")
+
+          st.image(image, caption="Distribution of Reviews. If review got substancially worse or better the recency weighted average is shown.")
+      with col2:
+          st.markdown(get_summary(selected_hotel))
 
 
     filtered_data = Hotel_Reviews[
-        (Hotel_Reviews["Hotel_Name"].isin(selected_hotel))
+        (Hotel_Reviews["Hotel_Name"]==selected_hotel)
     ]
     st.write("Explore the dataset:")
     st.dataframe(filtered_data)
