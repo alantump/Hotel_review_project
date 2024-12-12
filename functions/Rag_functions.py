@@ -11,8 +11,7 @@ from operator import itemgetter
 
 embeddingsAI = OpenAIEmbeddings()
 
-folder_path = "./Chroma/chroma_db_reviews_crete_merged"
-
+folder_path = "./Chroma/chroma_db_reviews_crete_merged_test"
 vectorstore = Chroma(persist_directory=folder_path,embedding_function=embeddingsAI)
 
 retriever = vectorstore.as_retriever()

@@ -4,48 +4,11 @@ import pandas as pd
 #from sklearn.ensemble import RandomForestRegressor
 import pickle
 import os
-#from model import train_and_save_model
+from dotenv import load_dotenv
 
-# file_path = 'global_development_data.csv'
-
-# # Load the CSV file
-# data = pd.read_csv(file_path)
-# min_year = int(data['year'].min())
-# max_year = int(data['year'].max())
-
-import re
-def data_loader():
-  """Loads data from CSV files, performs data cleaning and feature engineering.
-
-  Returns:
-    pandas.DataFrame: The processed hotel reviews dataset.
-  """
-
-  # Read hotel reviews data
-  Hotel_Reviews = pd.read_csv("Data/Hotel_Reviews.csv")
-
-  # Read country data
-  countries = pd.read_csv("Data/countries.csv")
-
-  # Add a "Country" column with NA values
-  Hotel_Reviews["Country"] = pd.NA
-
-  # Assign country based on pattern matching in Hotel_Address
-  for country_name in countries["name"]:
-    pattern = re.compile(country_name, re.IGNORECASE)  # Case-insensitive matching
-    Hotel_Reviews.loc[Hotel_Reviews["Hotel_Address"].str.contains(pattern), "Country"] = country_name
-
- 
-  # Convert Review_Date to datetime and extract features
-  Hotel_Reviews["date_object"] = pd.to_datetime(Hotel_Reviews["Review_Date"], format="%m/%d/%Y")
-  #Hotel_Reviews["time"] = Hotel_Reviews["date_object"].astype(int) / 10**9  # Convert to Unix timestamp
-  Hotel_Reviews["month"] = Hotel_Reviews["date_object"].dt.month
-  Hotel_Reviews["num_date_object"] = Hotel_Reviews["date_object"].dt.day_of_year / 365  # Normalize by days in a year
-
-  return Hotel_Reviews
-
-# Load the processed data
-#Hotel_Reviews = data_loader()
+load_dotenv()  # Load environment variables from .env file
+api_key = os.getenv('OPENAI_API_KEY')
+from functions.Rag_functions import process_question
 
 def data_loader_light():
   """Loads data from CSV files, performs data cleaning and feature engineering.
@@ -122,6 +85,31 @@ with tabs[0]:
         data=csv,
         file_name='filtered_data.csv',
     )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+with tabs[1]:
+  user_input = st.text_input("Please enter your hotel question:")
+
+  result = process_question(user_input)
+  # Display the output if the user has entered something
+  if user_input:
+      st.markdown(f"""**Answer:** {result}. 
+                  
+                  \n Are there other questions I can Help you with?""")
+
+
 
 # with tabs[1]:
 #     st.write("Content for Country Deep Dive")
