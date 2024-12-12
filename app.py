@@ -45,8 +45,22 @@ def data_loader():
   return Hotel_Reviews
 
 # Load the processed data
-Hotel_Reviews = data_loader()
+#Hotel_Reviews = data_loader()
 
+def data_loader_light():
+  """Loads data from CSV files, performs data cleaning and feature engineering.
+
+  Returns:
+    pandas.DataFrame: The processed hotel reviews dataset.
+  """
+
+  # Read hotel reviews data
+  Hotel_Reviews = pd.read_csv("Data/Hotel_Reviews.csv")
+
+  return Hotel_Reviews
+
+# Load the lighter data
+Hotel_Reviews = data_loader_light()
 
 # Set the page configuration to use the whole width of the page
 st.set_page_config(layout="wide")
@@ -81,14 +95,23 @@ tabs = st.tabs(["Tab 1", "Tab 2", "Tab 3"])
 # # Content for each tab
 with tabs[0]:
     hotels = Hotel_Reviews["Hotel_Name"].unique()
-    selected_hotels = st.multiselect("Select countries to view", hotels, default="Hotel Arena")
+    selected_hotel = st.multiselect("Select a hotel to view from a dropdown or write hotel name partially to filter options:", 
+                                    hotels, 
+                                    #default="Hotel Arena", 
+                                    max_selections = 1)
+
+    # selected_hotels = st.selectbox(
+    # "How would you like to be contacted?",
+    # ("Email", "Home phone", "Mobile phone"),)
+    
+    # st.write("You selected:", option)
 
     
     #selected_year_range = st.slider("Select the year range", min_year, max_year, (min_year, max_year))
 
 
     filtered_data = Hotel_Reviews[
-        (Hotel_Reviews["Hotel_Name"].isin(selected_hotels))
+        (Hotel_Reviews["Hotel_Name"].isin(selected_hotel))
     ]
     st.write("Explore the dataset:")
     st.dataframe(filtered_data)
