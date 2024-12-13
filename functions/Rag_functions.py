@@ -15,7 +15,7 @@ def get_retriever(folder_path):
     print("Running retriever")
     return retriever
 
-folder_path = "./Chroma/chroma_db_reviews_crete_merged2"
+folder_path = "./Chroma/chroma_db_reviews_crete_merged3"
 retriever = get_retriever(folder_path)
 ####
 
