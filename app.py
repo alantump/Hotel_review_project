@@ -37,17 +37,6 @@ Hotel_Reviews = data_loader_light()
 
 # Set the page configuration to use the whole width of the page
 st.set_page_config(layout="wide")
-#### Model
-# Check if the model pickle file exists
-# if not os.path.exists('life_expectancy_model.pkl'):
-#     train_and_save_model()
-# # Load the trained model
-# with open('life_expectancy_model.pkl', 'rb') as file:
-#     model = pickle.load(file)
-
-####
-st.write("Content for Reviews Analyzer")
-
 
 # Write the headline as a header
 st.title("Hotel Reviews Analyzer")
@@ -68,22 +57,50 @@ tabs = st.tabs(["Tab 1", "Tab 2", "Tab 3"])
 # # Content for each tab
 with tabs[0]:
     
-    hotels = Hotel_Reviews["Hotel_Name"].unique()
-    #selected_hotel2 = st.multiselect("Select a hotel to view from a dropdown or write hotel name partially to filter options:", 
-    #                                hotels, 
-    #                                #default="Hotel Arena", 
-    #                                max_selections = 1)
-    selected_hotel = st.selectbox("Select a hotel to view from a dropdown or write hotel name partially to filter options:", 
-                                hotels, index=None)
+    #hotels = Hotel_Reviews["Hotel_Name"].unique()
 
-    # selected_hotels = st.selectbox(
-    # "How would you like to be contacted?",
-    # ("Email", "Home phone", "Mobile phone"),)
-    
-    # st.write("You selected:", option)
+    # Count the number of reviews per hotel
+    review_counts = Hotel_Reviews.groupby("Hotel_Name").size().reset_index(name="Review_Count")
+    # Sort hotels by review count in descending order
+    sorted_hotels = review_counts.sort_values(by="Review_Count", ascending=False)
 
-    
-    #selected_year_range = st.slider("Select the year range", min_year, max_year, (min_year, max_year))
+    # Extract hotel names in sorted order
+    hotels = sorted_hotels["Hotel_Name"].tolist()
+
+    # Load the JSON file
+    json_file = "Scraping/properties_gr.json"
+    with open(json_file, "r") as file:
+        hotel_data = [json.loads(line) for line in file]
+
+    # Extract hotel titles
+    hotel_titles = [hotel["title"] for hotel in hotel_data]
+
+    # Layout for the select box and image display
+    col1, col2 = st.columns([0.7, 0.3])
+
+    # Select a hotel
+    with col1:
+        selected_hotel = st.selectbox(
+            "Select a hotel to view from a dropdown or write hotel name partially to filter options:",
+            hotels,
+        )
+
+    # Display the selected hotel's details and image
+    with col2:
+        # Find the selected hotel's details safely
+        selected_hotels = next(
+            (hotel for hotel in hotel_data if hotel["title"] == selected_hotel), None
+        )
+
+        # Check if the hotel was found
+        if selected_hotels:
+            st.image(selected_hotels["image"], caption=selected_hotels["title"], use_column_width=True)
+            #st.write(f"**Address:** {selected_hotels.get('address', 'Not provided')}")
+            #st.write(f"**Price:** {selected_hotels.get('price', 'Not provided')}")
+            #st.write(f"**Description:** {selected_hotels.get('decription', 'Not provided')}")
+        else:
+            st.write("Image of the hotel not available.")
+
     if selected_hotel is not None:
       col1, col2 = st.columns(2)
 
@@ -101,27 +118,6 @@ with tabs[0]:
     filtered_data = Hotel_Reviews[
         (Hotel_Reviews["Hotel_Name"]==selected_hotel)
     ]
-    st.write("Explore the dataset:")
-    st.dataframe(filtered_data)
-
-    csv = filtered_data.to_csv(index=False)
-    st.download_button(
-        label="Download filtered data as CSV",
-        data=csv,
-        file_name='filtered_data.csv',
-    )
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 with tabs[1]:
@@ -133,32 +129,3 @@ with tabs[1]:
       st.markdown(f"""**Answer:** {result}. 
                   
                   \n Are there other questions I can Help you with?""")
-
-
-
-# with tabs[1]:
-#     st.write("Content for Country Deep Dive")
-
-# with tabs[2]:
-   
-#     countries = data['country'].unique()
-#     selected_countries = st.multiselect("Select countries to view", countries, default="Germany")
-
-    
-#     selected_year_range = st.slider("Select the year range", min_year, max_year, (min_year, max_year))
-
-
-#     filtered_data = data[
-#         (data['country'].isin(selected_countries)) & 
-#         (data['year'] >= selected_year_range[0]) & 
-#         (data['year'] <= selected_year_range[1])
-#     ]
-#     st.write("Explore the dataset:")
-#     st.dataframe(filtered_data)
-
-#     csv = filtered_data.to_csv(index=False)
-#     st.download_button(
-#         label="Download filtered data as CSV",
-#         data=csv,
-#         file_name='filtered_data.csv',
-#     )
