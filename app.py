@@ -68,7 +68,18 @@ tabs = st.tabs(["Tab 1", "Tab 2", "Tab 3"])
 # # Content for each tab
 with tabs[0]:
     
-    hotels = Hotel_Reviews["Hotel_Name"].unique()
+    #hotels = Hotel_Reviews["Hotel_Name"].unique()
+ 
+
+    # Count the number of reviews per hotel
+    review_counts = Hotel_Reviews.groupby("Hotel_Name").size().reset_index(name="Review_Count")
+    # Sort hotels by review count in descending order
+    sorted_hotels = review_counts.sort_values(by="Review_Count", ascending=False)
+
+    # Extract hotel names in sorted order
+    hotels = sorted_hotels["Hotel_Name"].tolist()
+
+    #print (hotels)
     #selected_hotel2 = st.multiselect("Select a hotel to view from a dropdown or write hotel name partially to filter options:", 
     #                                hotels, 
     #                                #default="Hotel Arena", 
