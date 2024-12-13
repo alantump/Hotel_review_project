@@ -73,8 +73,80 @@ with tabs[0]:
     #                                hotels, 
     #                                #default="Hotel Arena", 
     #                                max_selections = 1)
-    selected_hotel = st.selectbox("Select a hotel to view from a dropdown or write hotel name partially to filter options:", 
-                                hotels, index=None)
+    #selected_hotel = st.selectbox("Select a hotel to view from a dropdown or write hotel name partially to filter options:", 
+    #                            hotels, index=None)
+
+    #import json
+  
+    
+    # # Load the JSON file
+    # json_file = "Scraping/properties_gr.json"  # Replace with your actual file path
+    # with open(json_file, "r") as file:
+    #     hotel_data = [json.loads(line) for line in file]
+
+    # # Extract hotel titles
+    # hotel_titles = [hotel["title"] for hotel in hotel_data]
+
+    # # Layout for the select box and image display
+    # col1, col2 = st.columns([0.7, 0.3])
+
+    # # Select a hotel
+    # with col1:
+    #     selected_hotel = st.selectbox("Select a hotel to view from a dropdown or write hotel name partially to filter options:", 
+    #                             hotels, index=None)
+    #     #selected_hotel_title = st.selectbox(
+    #     #    "Select a hotel to view from a dropdown or write hotel name partially to filter options:",
+    #     #    hotel_titles,
+    #     #)
+
+    # # Display the selected hotel's details and image
+    # with col2:
+    #     # Find the selected hotel's details
+    #     selected_hotels = next(hotel for hotel in hotel_data if hotel["title"] == selected_hotel)
+
+    #     # Display the image and some details
+    #     st.image(selected_hotels["image"], caption=selected_hotels["title"], use_column_width=True)
+    #     st.write(f"**Address:** {selected_hotels.get('address', 'Not provided')}")
+    #     st.write(f"**Price:** {selected_hotels.get('price', 'Not provided')}")
+    #     st.write(f"**Description:** {selected_hotels.get('decription', 'Not provided')}")
+    
+
+    # Load the JSON file
+    
+    json_file = "Scraping/properties_gr.json"  # Replace with the actual path
+    with open(json_file, "r") as file:
+        hotel_data = [json.loads(line) for line in file]
+
+    # Extract hotel titles
+    hotel_titles = [hotel["title"] for hotel in hotel_data]
+
+    # Layout for the select box and image display
+    col1, col2 = st.columns([0.7, 0.3])
+
+    # Select a hotel
+    with col1:
+        selected_hotel = st.selectbox(
+            "Select a hotel to view from a dropdown or write hotel name partially to filter options:",
+            hotels,
+        )
+
+    # Display the selected hotel's details and image
+    with col2:
+        # Find the selected hotel's details safely
+        selected_hotels = next(
+            (hotel for hotel in hotel_data if hotel["title"] == selected_hotel), None
+        )
+
+        # Check if the hotel was found
+        if selected_hotels:
+            st.image(selected_hotels["image"], caption=selected_hotels["title"], use_column_width=True)
+            #st.write(f"**Address:** {selected_hotels.get('address', 'Not provided')}")
+            #st.write(f"**Price:** {selected_hotels.get('price', 'Not provided')}")
+            #st.write(f"**Description:** {selected_hotels.get('decription', 'Not provided')}")
+        else:
+            st.write("Image of the hotel not available.")
+
+
 
     # selected_hotels = st.selectbox(
     # "How would you like to be contacted?",
