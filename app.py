@@ -184,15 +184,6 @@ with tabs[0]:
     filtered_data = Hotel_Reviews[
         (Hotel_Reviews["Hotel_Name"]==selected_hotel)
     ]
-    st.write("Explore the dataset:")
-    st.dataframe(filtered_data)
-
-    csv = filtered_data.to_csv(index=False)
-    st.download_button(
-        label="Download filtered data as CSV",
-        data=csv,
-        file_name='filtered_data.csv',
-    )
 
 
 
