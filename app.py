@@ -7,10 +7,19 @@ import os
 from dotenv import load_dotenv
 from PIL import Image
 import json
+import numpy as np
+import matplotlib.pyplot as plt
+
 
 load_dotenv()  # Load environment variables from .env file
 api_key = os.getenv('OPENAI_API_KEY')
 from functions.Rag_functions import process_question
+
+import json
+
+with open('hotel_classification_counts.json', 'r') as json_file:
+    hotel_classification_counts = json.load(json_file)
+
 
 
 # To retrieve a summary given a hotel name
@@ -19,6 +28,67 @@ def get_summary(hotel_name):
         summaries = json.load(json_file)
     return summaries.get(hotel_name, "Summary not found.")
 
+
+
+
+
+def survey(results, category_names):
+    """
+    Parameters
+    ----------
+    results : dict
+        A mapping from question labels to a list of answers per category.
+        It is assumed all lists contain the same number of entries and that
+        it matches the length of *category_names*. The order is assumed
+        to be from 'Strongly disagree' to 'Strongly aisagree'
+    category_names : list of str
+        The category labels.
+    """
+    
+    labels = list(results.keys())
+    data = np.array(list(results.values()))
+    data_cum = data.cumsum(axis=1)
+    middle_index = data.shape[1]//2
+    offsets = data[:, range(middle_index)].sum(axis=1) + data[:, middle_index]/2
+    
+    # Color Mapping
+    category_colors = plt.get_cmap('coolwarm_r')(
+        np.linspace(0.15, 0.85, data.shape[1]))
+    
+    fig, ax = plt.subplots(figsize=(4, 6))
+    
+    # Plot Bars
+    for i, (colname, color) in enumerate(zip(category_names, category_colors)):
+        widths = data[:, i]
+        starts = data_cum[:, i] - widths - offsets
+        rects = ax.barh(labels, widths, left=starts, height=0.5,
+                        label=colname, color=color)
+    
+    # Add Zero Reference Line
+    ax.axvline(0, linestyle='--', color='black', alpha=.25)
+    
+    # X Axis
+    ax.set_xlim(-90, 90)
+    ax.set_xticks(np.arange(-100, 100, 25))
+    ax.xaxis.set_major_formatter(lambda x, pos: str(abs(int(x))))
+    
+    # Y Axis
+    ax.invert_yaxis()
+    
+    # Remove spines
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    plt.xlabel('Percent of reviews mentioning this topic')
+
+    # Ledgend
+    ax.legend(ncol=len(category_names), bbox_to_anchor=(0, 1),
+              loc='lower left', fontsize='small')
+    
+    # Set Background Color
+    fig.set_facecolor('#FFFFFF')
+
+    return fig, ax
 
 def data_loader_light():
   """Loads data from CSV files, performs data cleaning and feature engineering.
@@ -102,7 +172,7 @@ with tabs[0]:
             st.write("Image of the hotel not available.")
 
     if selected_hotel is not None:
-      col1, col2 = st.columns(2)
+      col1, col2, col3 = st.columns([0.3, 0.2,0.4])
 
 
       with col1:
@@ -111,7 +181,43 @@ with tabs[0]:
           image = Image.open("Data/Histograms/" + no_spaces + " .png")
 
           st.image(image, caption="Distribution of Reviews. If review got substancially worse or better the recency weighted average is shown.")
+      
       with col2:
+        category_names = ['positive', 'neutral', 'negative']
+        counts = hotel_classification_counts[selected_hotel]
+        print(counts)
+        # Initialize a dictionary to store percentages per letter
+        letter_percentages = {}
+
+        # Collect all unique letters
+        all_letters = set(counts['positive'].keys()).union(set(counts['negative'].keys()))
+
+        # Calculate percentages for each letter
+        for letter in all_letters:
+            pos_count = counts['positive'].get(letter, 0)
+            neg_count = counts['negative'].get(letter, 0)
+            total_count = pos_count + neg_count
+            
+            pos_percentage = (pos_count / total_count) * 100 if total_count > 0 else 0
+            neg_percentage = (neg_count / total_count) * 100 if total_count > 0 else 0
+            
+            letter_percentages[letter] = {
+                'positive': pos_percentage,
+                'negative': neg_percentage
+            }
+      
+        results = {
+        'Room and Service': [letter_percentages["A"]["positive"],0, letter_percentages["A"]["negative"]],
+        "Food and Drinks": [letter_percentages["B"]["positive"],0, letter_percentages["B"]["negative"]],
+        "Location": [letter_percentages["C"]["positive"],0, letter_percentages["C"]["negative"]],
+        "Internet and Work": [letter_percentages["D"]["positive"],0, letter_percentages["D"]["negative"]],
+        "Surprising or Unexpected": [letter_percentages["E"]["positive"],0, letter_percentages["E"]["negative"]]
+        #"Other": [letter_percentages["F"]["positive"],0, letter_percentages["F"]["negative"]]
+        }
+        fig, ax = survey(results, category_names)
+
+        st.pyplot(fig)
+      with col3:
           st.markdown(get_summary(selected_hotel))
 
 
