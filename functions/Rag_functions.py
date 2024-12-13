@@ -5,6 +5,7 @@ from langchain.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain.load import dumps, loads
 from operator import itemgetter
+from langchain_community.vectorstores import FAISS
 
 ###### Preprcess
 #import streamlit as st
@@ -15,10 +16,19 @@ def get_retriever(folder_path):
     print("Running retriever")
     return retriever
 
-folder_path = "./Chroma/chroma_db_reviews_crete_merged3"
-retriever = get_retriever(folder_path)
+#folder_path = "./Chroma/chroma_db_reviews_crete_merged3"
+#retriever = get_retriever(folder_path)
 ####
 
+def get_retriever_faiss(index_path):
+    vectorstore = FAISS.load_local(index_path, embeddings=OpenAIEmbeddings(), allow_dangerous_deserialization=True)
+    retriever = vectorstore.as_retriever()
+    print("Running retriever")
+    return retriever
+
+index_path = "./faiss_index"
+retriever = get_retriever_faiss(index_path)
+####
 
 
 # Define a function to get unique union of documents
