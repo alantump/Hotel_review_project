@@ -46,7 +46,7 @@ st.set_page_config(layout="wide")
 #     model = pickle.load(file)
 
 ####
-st.write("Content for Reviews Analyzer")
+#st.write("Content for Reviews Analyzer")
 
 
 # Write the headline as a header
