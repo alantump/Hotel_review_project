@@ -28,7 +28,41 @@ def get_summary(hotel_name):
         summaries = json.load(json_file)
     return summaries.get(hotel_name, "Summary not found.")
 
+######
+#Geofunctions
+import pydeck as pdk
 
+from geopy.geocoders import Nominatim
+
+# Function to get geolocation data
+def get_geolocation(description):
+    geolocator = Nominatim(user_agent="geo_app")
+    location = geolocator.geocode(description)
+    if location:
+        return location.latitude, location.longitude
+    return None, None
+
+# Function to try multiple geocoding strategies
+def find_location(description):
+    # Try the full description first
+    latitude, longitude = get_geolocation(description)
+    if latitude is not None and longitude is not None:
+        return latitude, longitude
+    
+    # If not found, simplify the description and try again
+    simplified_description = description.split(',')[-1].strip()
+    return get_geolocation(simplified_description)
+
+
+
+
+
+
+
+
+
+
+#####
 
 
 
@@ -154,17 +188,59 @@ with tabs[0]:
             "Select a hotel to view from a dropdown or write hotel name partially to filter options:",
             hotels,
         )
-
-    # Display the selected hotel's details and image
-    with col2:
         # Find the selected hotel's details safely
         selected_hotels = next(
             (hotel for hotel in hotel_data if hotel["title"] == selected_hotel), None
         )
 
+        description=selected_hotels["address"]
+        latitude, longitude = find_location(description)
+
+        # Check if geolocation data is available
+        if latitude is not None and longitude is not None:
+          # Create a map centered around the location
+          data = pd.DataFrame({
+            'lat': [latitude],
+            'lon': [longitude]
+            })
+
+          # Display the map
+          # Define the initial view state
+          view_state = pdk.ViewState(
+              latitude=latitude,
+              longitude=longitude,
+              zoom=8.5,  # Set your desired zoom level here
+              pitch=10
+          )
+
+          # Create a layer for the map
+          layer = pdk.Layer(
+              'ScatterplotLayer',
+              data,
+              get_position='[lon, lat]',
+              get_radius=1200,
+              get_color=[255, 0, 0],
+              pickable=True
+          )
+          # Render the map with a lighter style
+          st.pydeck_chart(pdk.Deck(
+              layers=[layer],
+              initial_view_state=view_state,
+              map_style='mapbox://styles/mapbox/light-v9'  # Use a lighter map style
+          ))
+          # Render the map
+          #st.pydeck_chart(pdk.Deck(layers=[layer], initial_view_state=view_state))
+        else:
+          print(f"Location not found for: {description}")
+
+
+    # Display the selected hotel's details and image
+    with col2:
+
+
         # Check if the hotel was found
         if selected_hotels:
-            st.image(selected_hotels["image"], caption=selected_hotels["title"], use_column_width=True)
+            st.image(selected_hotels["image"], caption=selected_hotels["title"], use_container_width =True)
             #st.write(f"**Address:** {selected_hotels.get('address', 'Not provided')}")
             #st.write(f"**Price:** {selected_hotels.get('price', 'Not provided')}")
             #st.write(f"**Description:** {selected_hotels.get('decription', 'Not provided')}")
