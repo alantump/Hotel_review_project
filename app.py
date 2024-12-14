@@ -227,9 +227,7 @@ with tabs[0]:
               layers=[layer],
               initial_view_state=view_state,
               map_style='mapbox://styles/mapbox/light-v9'  # Use a lighter map style
-          ))
-          # Render the map
-          #st.pydeck_chart(pdk.Deck(layers=[layer], initial_view_state=view_state))
+          ), height=400, width=600)
         else:
           print(f"Location not found for: {description}")
 
