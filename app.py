@@ -37,7 +37,8 @@ from geopy.geocoders import Nominatim
 # Function to get geolocation data
 def get_geolocation(description):
     geolocator = Nominatim(user_agent="geo_app")
-    location = geolocator.geocode(description)
+    location = geolocator.geocode(f"{description}, Crete" )
+    print(location)
     if location:
         return location.latitude, location.longitude
     return None, None
@@ -195,6 +196,7 @@ with tabs[0]:
 
         if selected_hotels:
             description=selected_hotels["address"]
+            print(description)
             latitude, longitude = find_location(description)
 
             # Check if geolocation data is available
@@ -266,7 +268,6 @@ with tabs[0]:
       with col2:
         category_names = ['positive', 'neutral', 'negative']
         counts = hotel_classification_counts[selected_hotel]
-        print(counts)
         # Initialize a dictionary to store percentages per letter
         letter_percentages = {}
 
