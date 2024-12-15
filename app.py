@@ -193,43 +193,48 @@ with tabs[0]:
             (hotel for hotel in hotel_data if hotel["title"] == selected_hotel), None
         )
 
-        description=selected_hotels["address"]
-        latitude, longitude = find_location(description)
+        if selected_hotels:
+            description=selected_hotels["address"]
+            latitude, longitude = find_location(description)
 
-        # Check if geolocation data is available
-        if latitude is not None and longitude is not None:
-          # Create a map centered around the location
-          data = pd.DataFrame({
-            'lat': [latitude],
-            'lon': [longitude]
-            })
+            # Check if geolocation data is available
+            if latitude is not None and longitude is not None:
+              # Create a map centered around the location
+              data = pd.DataFrame({
+                'lat': [latitude],
+                'lon': [longitude]
+                })
 
-          # Display the map
-          # Define the initial view state
-          view_state = pdk.ViewState(
-              latitude=latitude,
-              longitude=longitude,
-              zoom=8.5,  # Set your desired zoom level here
-              pitch=10
-          )
+              # Display the map
+              # Define the initial view state
+              view_state = pdk.ViewState(
+                  latitude=latitude,
+                  longitude=longitude,
+                  zoom=8.5,  # Set your desired zoom level here
+                  pitch=10
+              )
 
-          # Create a layer for the map
-          layer = pdk.Layer(
-              'ScatterplotLayer',
-              data,
-              get_position='[lon, lat]',
-              get_radius=1200,
-              get_color=[255, 0, 0],
-              pickable=True
-          )
-          # Render the map with a lighter style
-          st.pydeck_chart(pdk.Deck(
-              layers=[layer],
-              initial_view_state=view_state,
-              map_style='mapbox://styles/mapbox/light-v9'  # Use a lighter map style
-          ), height=400, width=600)
+              # Create a layer for the map
+              layer = pdk.Layer(
+                  'ScatterplotLayer',
+                  data,
+                  get_position='[lon, lat]',
+                  get_radius=1200,
+                  get_color=[255, 0, 0],
+                  pickable=True
+              )
+              # Render the map with a lighter style
+              st.pydeck_chart(pdk.Deck(
+                  layers=[layer],
+                  initial_view_state=view_state,
+                  map_style='mapbox://styles/mapbox/light-v9'  # Use a lighter map style
+              ), height=400, width=600)
+            else:
+              print(f"Location not found for: {description}")
         else:
-          print(f"Location not found for: {description}")
+            st.write("Hotel address not available.")
+
+        
 
 
     # Display the selected hotel's details and image
@@ -239,7 +244,8 @@ with tabs[0]:
         # Check if the hotel was found
         if selected_hotels:
             #st.image(selected_hotels["image"], caption=selected_hotels["title"], use_container_width =True)
-            st.image(selected_hotels["image"], caption=selected_hotels["title"]) # deleting use_container_width =True because it was causing errors
+            #st.image(selected_hotels["image"], caption=selected_hotels["title"]) # deleting use_container_width =True because it was causing errors
+            st.image(selected_hotels["image"], caption=selected_hotels["title"], use_column_width=True)
             #st.write(f"**Address:** {selected_hotels.get('address', 'Not provided')}")
             #st.write(f"**Price:** {selected_hotels.get('price', 'Not provided')}")
             #st.write(f"**Description:** {selected_hotels.get('decription', 'Not provided')}")
