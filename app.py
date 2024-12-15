@@ -238,7 +238,8 @@ with tabs[0]:
 
         # Check if the hotel was found
         if selected_hotels:
-            st.image(selected_hotels["image"], caption=selected_hotels["title"], use_container_width =True)
+            #st.image(selected_hotels["image"], caption=selected_hotels["title"], use_container_width =True)
+            st.image(selected_hotels["image"], caption=selected_hotels["title"]) # deleting use_container_width =True because it was causing errors
             #st.write(f"**Address:** {selected_hotels.get('address', 'Not provided')}")
             #st.write(f"**Price:** {selected_hotels.get('price', 'Not provided')}")
             #st.write(f"**Description:** {selected_hotels.get('decription', 'Not provided')}")
