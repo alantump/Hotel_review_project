@@ -37,7 +37,7 @@ from geopy.geocoders import Nominatim
 # Function to get geolocation data
 def get_geolocation(description):
     geolocator = Nominatim(user_agent="geo_app")
-    location = geolocator.geocode(f"{description}, Crete" )
+    location = geolocator.geocode(f"{description}, Crete" , timeout=10)
     print(location)
     if location:
         return location.latitude, location.longitude
@@ -160,14 +160,29 @@ st.title("Hotel Reviews Analyzer")
 
 st.subheader("Personal Review Analyzer Assistant")
 col1, col2, = st.columns([0.75,0.25])
+
+# Initialize session state for user input
+if 'previous_input' not in st.session_state:
+    st.session_state['previous_input'] = ''
+
+
 with col1:
-  user_input = st.text_input("Please enter your hotel question:")
-  result = process_question(user_input)
-  # Display the output if the user has entered something
-  if user_input:
-      st.markdown(f"""**Answer:**\n {result}. 
+    user_input = st.text_input("Please enter your hotel question:")
+
+    # Check if the input has changed
+    if user_input != st.session_state['previous_input']:
+        # Update the session state
+        st.session_state['previous_input'] = user_input
+
+        # Process the question and display the result
+        if user_input:
+            result = process_question(user_input)
+            st.markdown(f"""**Answer:**\n {result} 
+                        
+            \n Are there other questions I can Help you with?""")
+      
                   
-                  \n Are there other questions I can Help you with?""")
+          
 
 st.subheader("Hotel Overview")
 
