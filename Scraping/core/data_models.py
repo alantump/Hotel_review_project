@@ -300,4 +300,3 @@ if __name__ == "__main__":
     # a = Config(**j)
     # a.HOTEL_PAGE_URL += "Hello"
 
-    print(a)

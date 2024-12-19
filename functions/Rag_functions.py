@@ -7,27 +7,95 @@ from langchain.load import dumps, loads
 from operator import itemgetter
 from langchain_community.vectorstores import FAISS
 
-###### Preprcess
-#import streamlit as st
-#@st.cache_data
-def get_retriever(folder_path):
-    vectorstore = Chroma(persist_directory=folder_path, embedding_function=OpenAIEmbeddings())
+
+
+
+
+import os
+import pandas as pd
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_community.document_loaders import TextLoader
+from langchain_openai import OpenAIEmbeddings
+from langchain_ollama import OllamaEmbeddings
+
+from langchain_community.vectorstores import FAISS
+
+def save_vectorstore(hotel_reviews, data_name, local=True):
+    # Merge the columns using string concatenation
+    file_name = "Data/used_data.txt"
+    index_path = f"Data/faiss_index/{data_name}/"
+
+    hotel_reviews['MergedColumn'] = hotel_reviews.apply(
+        lambda row: (
+            f"Hotel: {row['Hotel_Name']}. "
+            f"Positive Guest Review: {row['Positive_Review'] or 'No review available'}\n\n"
+            f"Hotel: {row['Hotel_Name']}. "
+            f"Negative Guest Review: {row['Negative_Review'] or 'No review available'}\n\n"
+        ),
+        axis=1
+    )
+    # Select the first 100 rows of the merged column
+    used_data = hotel_reviews['MergedColumn'].dropna()
+    
+    # Save the data to a text file
+    with open(file_name, 'w') as f:
+        for line in used_data:
+            f.write(line + '\n')
+    
+    # Load raw documents
+    raw_documents = TextLoader(file_name).load()
+    
+    # Split documents
+    text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
+        separators=["\n\n"],
+        chunk_size=400, 
+        chunk_overlap=0
+    )
+    splits = text_splitter.split_documents(raw_documents)
+    print(f"Make embeddings. Found splits:{len(splits)}")
+    # Initialize embeddings
+    if local:
+        embeddings = OllamaEmbeddings(model="llama3")
+    else:
+        embeddings = OpenAIEmbeddings()
+
+
+    # Check if the FAISS index already exists
+    if not os.path.exists(index_path):
+        # Create a new FAISS index from documents
+        vectorstore = FAISS.from_documents(documents=splits, embedding=embeddings)
+        # Save the index to disk
+        vectorstore.save_local(index_path)
+    else:
+        # Load the existing FAISS index
+        vectorstore = FAISS.load_local(index_path, embeddings=embeddings, allow_dangerous_deserialization=True)
+    
+    # Use the vectorstore as a retriever
+    retriever = vectorstore.as_retriever()
+    
+    return retriever
+
+
+
+
+
+
+
+
+
+
+def get_retriever_faiss(index_path,local=True):
+    if local:
+        embeddings = OllamaEmbeddings(model="llama3")
+    else:
+        embeddings = OpenAIEmbeddings()
+
+    vectorstore = FAISS.load_local(index_path, embeddings=embeddings, allow_dangerous_deserialization=True)
     retriever = vectorstore.as_retriever()
     print("Running retriever")
     return retriever
 
-#folder_path = "./Chroma/chroma_db_reviews_crete_merged3"
-#retriever = get_retriever(folder_path)
-####
 
-def get_retriever_faiss(index_path):
-    vectorstore = FAISS.load_local(index_path, embeddings=OpenAIEmbeddings(), allow_dangerous_deserialization=True)
-    retriever = vectorstore.as_retriever()
-    print("Running retriever")
-    return retriever
-
-index_path = "./faiss_index"
-retriever = get_retriever_faiss(index_path)
 ####
 
 
@@ -87,3 +155,5 @@ def process_question(question):
 
     # Invoke the final chain and return the result
     return final_rag_chain.invoke({"question": question})
+
+

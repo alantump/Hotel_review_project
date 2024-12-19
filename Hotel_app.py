@@ -18,10 +18,32 @@ from functions.Rag_functions import process_question, get_retriever_faiss
 import json
 
 
-index_path = "./faiss_index"
+
+def list_folders_in_directory(directory_path):
+    try:
+        # List all entries in the directory
+        entries = os.listdir(directory_path)
+        
+        # Filter out entries that are directories
+        folders = [entry for entry in entries if os.path.isdir(os.path.join(directory_path, entry))]
+        
+        return folders
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return []
+
+# Example usage
+directory_path = '/Data/faiss_index'
+folders = list_folders_in_directory(directory_path)
+
+data_name = folders[0]
+
+
+
+index_path = g"./faiss_index/{data_name}"
 retriever = get_retriever_faiss(index_path, local=True) #change to openAI by adding local= False
 
-with open('hotel_classification_counts.json', 'r') as json_file:
+with open(f'hotel_classification_counts_{data_name}.json', 'r') as json_file:
     hotel_classification_counts = json.load(json_file)
 
 
