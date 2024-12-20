@@ -20,6 +20,8 @@ from langchain_ollama import OllamaEmbeddings
 
 from langchain_community.vectorstores import FAISS
 
+
+
 def save_vectorstore(hotel_reviews, data_name, local=True):
     # Merge the columns using string concatenation
     file_name = "Data/used_data.txt"
@@ -111,7 +113,7 @@ def get_unique_union(documents: list[list]):
     return [loads(doc) for doc in unique_docs]
 
 
-def process_question(question):
+def process_question(question,retriever):
 
 
 

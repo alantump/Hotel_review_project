@@ -129,7 +129,7 @@ def categorize_reviews(used_data,data_name):
             hotel_classification_counts[hotel_name] = {}
         hotel_classification_counts[hotel_name]['negative'] = dict(letter_counts)
 
-    with open(f'hotel_classification_counts_{data_name}.json', 'w') as json_file:
+    with open(f'Data/hotel_classification_counts_{data_name}.json', 'w') as json_file:
         json.dump(hotel_classification_counts, json_file, indent=4)
 
 def summarize_reviews(used_data, data_name):
@@ -152,5 +152,5 @@ def summarize_reviews(used_data, data_name):
         summarized_reviews[hotel] = summarizer.summarize_text_local(reviews)
 
     # Store summarized reviews in a JSON file
-    with open(f'summarized_reviews_{used_data}.json', 'w') as json_file:
+    with open(f'Data/summarized_reviews_{data_name}.json', 'w') as json_file:
         json.dump(summarized_reviews, json_file, indent=4)

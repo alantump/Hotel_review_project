@@ -2,20 +2,22 @@ import streamlit as st
 import pandas as pd
 #import plotly.express as px    
 #from sklearn.ensemble import RandomForestRegressor
-import pickle
 import os
 from dotenv import load_dotenv
 from PIL import Image
 import json
 import numpy as np
 import matplotlib.pyplot as plt
+import pydeck as pdk
+
+
+from functions.scrape1 import data_loader, find_location
+from functions.Rag_functions import process_question, get_retriever_faiss
 
 
 load_dotenv()  # Load environment variables from .env file
 api_key = os.getenv('OPENAI_API_KEY')
-from functions.Rag_functions import process_question, get_retriever_faiss
 
-import json
 
 
 
@@ -33,24 +35,12 @@ def list_folders_in_directory(directory_path):
         return []
 
 # Example usage
-directory_path = '/Data/faiss_index'
-folders = list_folders_in_directory(directory_path)
-
-data_name = folders[0]
-
-
-
-index_path = g"./faiss_index/{data_name}"
-retriever = get_retriever_faiss(index_path, local=True) #change to openAI by adding local= False
-
-with open(f'hotel_classification_counts_{data_name}.json', 'r') as json_file:
-    hotel_classification_counts = json.load(json_file)
 
 
 
 # To retrieve a summary given a hotel name
 def get_summary(hotel_name):
-    with open('summarized_reviews_gr.json', 'r') as json_file:
+    with open(f'Data/summarized_reviews_{data_name}.json', 'r') as json_file:
         summaries = json.load(json_file)
     return summaries.get(hotel_name, "Summary not found.")
 
@@ -127,27 +117,14 @@ def survey(results, category_names):
 
     return fig, ax
 
-def data_loader_light():
-  """Loads data from CSV files, performs data cleaning and feature engineering.
-
-  Returns:
-    pandas.DataFrame: The processed hotel reviews dataset.
-  """
-
-  # Read hotel reviews data
-  Hotel_Reviews = pd.read_csv("Scraping/crete_11_12_2024.csv")
-
-  return Hotel_Reviews
 
 # Load the lighter data
-Hotel_Reviews = data_loader_light()
 
 # Set the page configuration to use the whole width of the page
 st.set_page_config(layout="wide")
 
 # Write the headline as a header
 st.title("Hotel Reviews Analyzer")
-
 # Write the subtitle
 # st.write(
 #     "Booking.com is one of the largest online travel agencies and one of the top 100 most visited websites in the world."
@@ -157,6 +134,22 @@ st.title("Hotel Reviews Analyzer")
 #         " that analyses hotel reviews and provides valuable information that allows customers to make more informed"
 #          " decisions based on the past experiences of others."
 # )
+
+directory_path = './Data/faiss_index'
+folders = list_folders_in_directory(directory_path)
+
+data_name = st.selectbox(
+    "Select the data source:",
+    folders,
+)
+Hotel_Reviews = data_loader(data_name)
+
+
+index_path = f"./Data/faiss_index/{data_name}"
+retriever = get_retriever_faiss(index_path, local=True) #change to openAI by adding local= False
+
+with open(f'Data/hotel_classification_counts_{data_name}.json', 'r') as json_file:
+    hotel_classification_counts = json.load(json_file)
 
 
 
@@ -178,7 +171,7 @@ with col1:
 
         # Process the question and display the result
         if user_input:
-            result = process_question(user_input)
+            result = process_question(user_input, retriever)
             st.markdown(f"""**Answer:**\n {result} 
                         
             \n Are there other questions I can Help you with?""")
@@ -199,7 +192,7 @@ sorted_hotels = review_counts.sort_values(by="Review_Count", ascending=False)
 hotels = sorted_hotels["Hotel_Name"].tolist()
 
 # Load the JSON file
-json_file = "Scraping/properties_gr.json"
+json_file = f"./Data/{data_name}properties.json"
 with open(json_file, "r") as file:
     hotel_data = [json.loads(line) for line in file]
 
@@ -293,7 +286,7 @@ with col2:
 with col3:
       original_string = selected_hotel
       no_spaces = selected_hotel.replace(" ", "")
-      image = Image.open("Data/Histograms/" + no_spaces + " .png")
+      image = Image.open(f"./Data/Histograms/{data_name}/" + no_spaces + ".png")
 
       st.image(image, caption="Distribution of Reviews. ") #If review got substancially worse or better the recency weighted average is shown.
 

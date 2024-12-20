@@ -29,7 +29,7 @@ def handle_no_such_element_exception(data_extraction_task):
 # Function to get geolocation data
 def get_geolocation(description):
     geolocator = Nominatim(user_agent="geo_app")
-    location = geolocator.geocode(f"{description}, Crete" , timeout=10)
+    location = geolocator.geocode(f"{description}" , timeout=10)
     print(location)
     if location:
         return location.latitude, location.longitude
@@ -183,7 +183,7 @@ def scrape_properties(url, max_button_clicks, data_name, country_short):
 
     for item in items:
         url = item['url']
-        match = re.search(r'hotel/gr/(.+?)\.de\.html', url)
+        match = re.search(r'hotel/{}/(.+?)\.de\.html'.format(country_short), url)
         if match:
             hotel_url_name = match.group(1)
             hotel_url_names.append(hotel_url_name)
@@ -191,7 +191,7 @@ def scrape_properties(url, max_button_clicks, data_name, country_short):
 
     df = pd.DataFrame(items)
     df["Hotel_key"] = hotel_url_names
-    #df['latitude'], df['longitude'] = zip(*df['address'].apply(find_location))
+    df['latitude'], df['longitude'] = zip(*df['address'].apply(find_location))
 
     df.to_json("Data/" + data_name + 'properties.json', orient='records', lines=True)
     print("Start scraping Hotel Website")
