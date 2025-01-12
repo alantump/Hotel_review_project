@@ -9,13 +9,22 @@ print( )
 plot(as.numeric(prices)~Hotel_Reviews$Reviewer_Score)
 Hotel_Reviews$num_price = as.numeric(prices)
 
-Hotel_Reviews %>% group_by(Hotel_Name)   %>% summarise(m=mean(num_price), m_score= mean(Reviewer_Score), n =n()) %>% filter(m<1000, n>100) %>% 
-  ggplot(aes(x=m_score,y=m)) + geom_point() +geom_smooth()
+tt = Hotel_Reviews %>% group_by(Hotel_Name) %>% summarise(m=mean(num_price/5), m_score= mean(Reviewer_Score), n =n())  %>% filter(m<1000, n>100) 
 
-tt = Hotel_Reviews %>% group_by(Hotel_Name) %>% summarise(m=mean(num_price), m_score= mean(Reviewer_Score), n =n())  %>% filter(m<1000, n>100)
-lm(m ~ m_score, data=tt )
+m_price = lm(m ~ m_score, data=tt%>% filter(m_score>8))
+
+price_p = Hotel_Reviews %>% group_by(Hotel_Name)   %>% summarise(m=mean(num_price), m_score= mean(Reviewer_Score), n =n()) %>% filter(m<1000, n>100) %>% 
+  ggplot(aes(x=m_score,y=m/5)) + geom_point() +geom_smooth() + theme_minimal() +ylab("Price per Night") + xlab("Average Rating") +
+  annotate("text", x = 7.5, y = 170, label = paste("Slope:", round(m_price$coefficients[2], 2), "€"), size = 5) 
+price_p
+  
+ggsave(paste("Data/price.png"),price_p, width =3.5, height = 3,dpi = 400)
 
 
+
+#lm(m ~ m_score, data=tt)
+
+tt
 
 
 

@@ -442,7 +442,7 @@ train_data$Score_cleaned = train_data$Reviewer_Score - train_data$yhat
 fit_cleaned = lm(
    Score_cleaned ~ 0 +  Hotel_Name + time_ref:Hotel_Name, data = train_data)
 #save(fit, file = "Simple_lm.RData")
-all_coefficients = coef(fit_cleaned)
+#all_coefficients = coef(fit_cleaned)
 model_summary <- summary(fit_cleaned)
 
 
@@ -461,6 +461,15 @@ interaction_summary <- coefficients_table[grep(":", rownames(coefficients_table)
    arrange(Estimate) %>%
   mutate(Name = factor(Name, levels = Name)) %>% mutate(Pos = ifelse(t.value>t_threshold_slope, 1, 0),
                                                         Neg = ifelse(t.value<(-t_threshold_slope), 1, 0),
+                                                        tendency = Pos-Neg)
+
+ 
+ time_effct_cleaned =  data.frame(interaction_summary) %>% mutate(Name= rownames(.),
+                                                         Name = stringr::str_replace(Name, c("Hotel_Name"),""),
+                                                         Name = stringr::str_replace(Name, c(":time_ref"),"")) %>%
+   arrange(Estimate) %>%
+  mutate(Name = factor(Name, levels = Name)) %>% mutate(Pos = ifelse(Estimate>0.2/12, 1, 0),
+                                                        Neg = ifelse(Estimate<(-0.2/12), 1, 0),
                                                         tendency = Pos-Neg)
 
  
@@ -628,14 +637,69 @@ exp$stop()
 confusionMatrix
 ```
 ```{r}
+both = both %>% filter(abs(Estimate.x)<0.45)
 
-brms()
+both %>% ggplot(aes(x=Estimate.x, y=Neg_label)) + geom_point() +geom_smooth()
+
 ```
 
 
 ```{r}
-summary(time_effct_cleaned)
+
+
+library(brms)
+fit_bayes = brm(Neg_label ~ me(Estimate.x, Std..Error), family = bernoulli("logit"), data=both)
+
+
 ```
+
+
+
+```{r}
+summary(fit_bayes)
+```
+
+
+```{r}
+# Assuming fit_bayes is your fitted brms model
+# Generate posterior predictions
+posterior_predictions <- posterior_epred(fit_bayes)
+
+# Calculate the mean predicted probability for each observation
+predicted_probabilities <- colMeans(posterior_predictions)
+predicted_sd <- apply(posterior_predictions, 2, sd)
+
+# Create a data frame for plotting
+plot_data <- data.frame(
+  Observed = fit_bayes$data$Neg_label,  # Replace with your actual response variable name
+  Predicted = predicted_probabilities,
+  Predicted_cat = ifelse(predicted_probabilities>0.4,1,0),
+  predicted_error = predicted_sd
+)
+
+# Plot the observed vs. predicted probabilities with error bars
+ggplot(plot_data, aes(y = Observed, x = Predicted)) +
+  geom_point() + geom_smooth()+
+  #geom_jitter(width = 0.1, height = 0, alpha = 0.5) +
+  #geom_errorbar(aes(ymin = Predicted - predicted_error, ymax = Predicted + predicted_error), width = 0.0, alpha = 0.5) +
+  labs(title = "Observed vs. Predicted Probabilities",
+       x = "Observed Outcome",
+       y = "Predicted Probability") +
+  theme_minimal()
+
+```
+
+
+```{r}
+
+both %>% ggplot(aes(x=Estimate.x, y=Neg_label)) + geom_point() +geom_smooth()
+
+
+
+confusionMatrix <- confusionMatrix(as.factor(plot_data$Predicted_cat), as.factor(plot_data$Observed), positive = "1")
+confusionMatrix
+```
+
 
 
 
