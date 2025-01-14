@@ -11,14 +11,16 @@ Reviews play such an important role in booking a hotel because the past experien
 Thus, people are willing to pay quite a bit more for hotels with good scores (see literature: https://api.semanticscholar.org/CorpusID:54877756 or https://api.semanticscholar.org/CorpusID:203160926).
 On the other hand, this also means that people pay too much for hotels whose scores do not reflect their true quality.
 
-Here we want to better inform consumers by developing an app (Hopefully Google Chrome extension)  that allows them to better judge the quality of the hotel by providing additional information about the ratings and reviews.
+Here I developed an app (Hopefully soon Google Chrome extension) to better inform consumers hat allows them to better judge the quality of the hotel by providing additional information about the ratings and reviews.
+
+It has following features:
 
 1. Trend Detector: which identifies hotels that have deteriorating review scores by comparing averawge ratings with recency weighted averages.
 2. A quantitative and qualitative overview of the hotels.
 3. A Rag-system allowing the customer to ask questions about a specific hotel (e.g., How is the internet connection?) or generally Hotels in an area (Which hotels have good beds?).
 Not Implemented yet:
-4. Bonus: Reason Extractor. An NLP model that identifies reviews that are associated with deteriorating hotels, thereby providing additional insights.
-5. Bonus: A Recommendation system allowing to find similar Hotels.
+4. Not implemented yet: Reason Extractor. An NLP model that identifies reviews that are associated with deteriorating hotels, thereby providing additional insights.
+5. Not implemented yet: A Recommendation system allowing to find similar Hotels.
 
 
 ## How to use it
@@ -50,9 +52,9 @@ The notebook does following steps:
 
 1. Scrape the data from booking
 2. Clean the reviews and translate spanisch, german, french into english
-3. Categorize reviews
-4. Summarize hotel reviews
-5. Create a embedding database 
+3. Categorize reviews into topics
+4. Summarize reviews of each hotel  
+5. Create a embedding database for a RAG system
 6. Plotting and saving the rating summaries 
 
 

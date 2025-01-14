@@ -34,7 +34,7 @@ def load_dataframes(main_folder_path,data_name):
             if file == 'reviews_most_relevant.csv':
                 file_path = os.path.join(subdir, file)
                 df = pd.read_csv(file_path)
-                pattern = rf'output/{data_name}/(.*?)_2024'
+                pattern = rf'output/{data_name}/(.*?)_202'
                 match = re.search(pattern, subdir)
                 if match and match.group(1):
                     df['Hotel_key'] = match.group(1)

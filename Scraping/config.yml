@@ -1,4 +1,4 @@
 HOTEL_REVIEWS_PAGE: https://www.booking.com/reviewlist.en-gb.html
 MAX_RETIES: 3
-OUTPUT_DIR: output/Pitztal
+OUTPUT_DIR: output/Mauritius
 REQUESTS_PER_SECOND: 10
