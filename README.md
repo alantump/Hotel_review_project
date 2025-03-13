@@ -1,8 +1,8 @@
 # Hotel Review Project
 
-Booking.com is one of the largest online travel agencies and under the top 100 most visited websites of the world. Customers booked in more than a billion (10^9) nights on booking. Thus, improving aiding the booking and hotel choice procedure has the potential to improve a huge number of customers.
+Booking.com is one of the largest online travel agencies and under the top 100 most visited websites of the world. Customers booked more than a billion (10^9) nights on Booking.com. Thus, improving aiding the booking and hotel choice procedure has the potential to benefit a huge number of customers.
 
-This, or something similar, is what you see when you try to book a hotel on booking.com.
+This, or something similar, is what you see when you try to book a hotel on Booking.com.
 The most important information people use when booking a hotel is the room price, followed by the customer rating.
 
 <img src="pics/Booking_page.png" width="60%">.
@@ -11,14 +11,13 @@ Reviews play such an important role in booking a hotel because the past experien
 Thus, people are willing to pay quite a bit more for hotels with good scores (see literature: https://api.semanticscholar.org/CorpusID:54877756 or https://api.semanticscholar.org/CorpusID:203160926).
 On the other hand, this also means that people pay too much for hotels whose scores do not reflect their true quality.
 
-Here we developed an app (Hopefully soon Google Chrome extension) to better inform consumers hat allows them to better judge the quality of the hotel by providing additional information about the ratings and reviews.
+Here we developed a Streamlit app (Hopefully soon Google Chrome extension) to better inform consumers what allows them to better judge the quality of the hotel by providing additional information about the ratings and reviews.
 
 It has following features:
 
 1. Trend Detector: which identifies hotels that have deteriorating review scores by comparing average ratings with recency weighted averages.
 2. A quantitative and qualitative overview of the hotels.
-3. A Rag-system allowing the customer to ask questions about a specific hotel (e.g., How is the internet connection?) or generally Hotels in an area (Which hotels have good beds?).
-   Not Implemented yet:
+3. A RAG system allowing the customer to ask questions about a specific hotel (e.g., How is the internet connection?) or generally about hotels in an area (Which hotels have good beds?).
 4. Not implemented yet: Reason Extractor. An NLP model that identifies reviews that are associated with deteriorating hotels, thereby providing additional insights.
 5. Not implemented yet: A Recommendation system allowing to find similar hotels.
 
@@ -37,7 +36,7 @@ The `.gitignore` file has `.env` included, thus it should be save. The api is us
 
 ### Ollama model
 
-llama3 is used to generate embeddings of the reviews and llama3.2 to categorize the reviews into specifc catgeries.
+llama3 is used to generate embeddings of the reviews and llama3.2 to categorize the reviews into specifc categories.
 Thus, you need to install Ollama on your computer and download this two models.
 
 See:
