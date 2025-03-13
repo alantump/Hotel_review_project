@@ -6,19 +6,10 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain.load import dumps, loads
 from operator import itemgetter
 from langchain_community.vectorstores import FAISS
-
-
-
-
-
-import os
 import pandas as pd
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import TextLoader
-from langchain_openai import OpenAIEmbeddings
 from langchain_ollama import OllamaEmbeddings
-
-from langchain_community.vectorstores import FAISS
 
 
 
@@ -78,14 +69,6 @@ def save_vectorstore(hotel_reviews, data_name, local=True):
     return retriever
 
 
-
-
-
-
-
-
-
-
 def get_retriever_faiss(index_path,local=True):
     if local:
         embeddings = OllamaEmbeddings(model="llama3")
@@ -97,9 +80,7 @@ def get_retriever_faiss(index_path,local=True):
     print("Running retriever")
     return retriever
 
-
 ####
-
 
 # Define a function to get unique union of documents
 def get_unique_union(documents: list[list]):
@@ -114,8 +95,6 @@ def get_unique_union(documents: list[list]):
 
 
 def process_question(question,retriever):
-
-
 
     # Multi Query: Different Perspectives
     template = """You are an AI language model assistant. Your task is to generate five 
@@ -132,7 +111,6 @@ def process_question(question,retriever):
         | StrOutputParser() 
         | (lambda x: x.split("\n"))
     )
-
 
     # Retrieve documents
     retrieval_chain = generate_queries | retriever.map() | get_unique_union
@@ -157,5 +135,3 @@ def process_question(question,retriever):
 
     # Invoke the final chain and return the result
     return final_rag_chain.invoke({"question": question})
-
-
