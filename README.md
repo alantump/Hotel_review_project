@@ -53,3 +53,9 @@ The notebook does following steps:
 4. Summarize reviews of each hotel
 5. Create a embedding database for a RAG system
 6. Plotting and saving the rating summaries
+
+### Streamlit app
+
+The streamlit app looks like this:
+
+<img src="pics/hotel_reviews_streamlit.png" width="60%">.
