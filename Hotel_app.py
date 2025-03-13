@@ -1,7 +1,5 @@
 import streamlit as st
 import pandas as pd
-#import plotly.express as px    
-#from sklearn.ensemble import RandomForestRegressor
 import os
 from dotenv import load_dotenv
 from PIL import Image
@@ -34,29 +32,12 @@ def list_folders_in_directory(directory_path):
         print(f"An error occurred: {e}")
         return []
 
-# Example usage
-
-
 
 # To retrieve a summary given a hotel name
 def get_summary(hotel_name):
     with open(f'Data/summarized_reviews_{data_name}.json', 'r') as json_file:
         summaries = json.load(json_file)
     return summaries.get(hotel_name, "Summary not found.")
-
-
-
-
-
-
-
-
-
-
-
-
-#####
-
 
 
 def survey(results, category_names):
@@ -108,7 +89,7 @@ def survey(results, category_names):
     ax.spines['left'].set_visible(False)
     plt.xlabel('Percent of reviews mentioning this topic')
 
-    # Ledgend
+    # Legend
     ax.legend(ncol=len(category_names), bbox_to_anchor=(0, 1),
               loc='lower left', fontsize='small')
     
