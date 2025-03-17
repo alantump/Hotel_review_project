@@ -15,15 +15,12 @@ import subprocess
 from tqdm import tqdm
 import yaml
 import numpy as pd
-import pandas as pd
 
 def handle_no_such_element_exception(data_extraction_task):
     try:
         return data_extraction_task()
     except NoSuchElementException:
         return None
-
-
 
 
 # Function to get geolocation data
@@ -45,7 +42,6 @@ def find_location(description):
     # If not found, simplify the description and try again
     simplified_description = description.split(',')[-1].strip()
     return get_geolocation(simplified_description)
-
 
 
 def scrape_properties(url, max_button_clicks, data_name, country_short):
@@ -162,9 +158,6 @@ def scrape_properties(url, max_button_clicks, data_name, country_short):
         items.append(item)
 
 
-
-
-
     output_file = f"Data/properties_{data_name}.csv"
 
     # Open the file and write data using csv.DictWriter
@@ -218,8 +211,6 @@ def scrape_properties(url, max_button_clicks, data_name, country_short):
         )
 
 
-
-
 def data_loader(data_name):
   """Loads data from CSV files, performs data cleaning and feature engineering.
 
@@ -230,9 +221,6 @@ def data_loader(data_name):
   Hotel_Reviews = pd.read_csv("Data/" + data_name + ".csv")
 
 
-
-
- 
   # Convert Review_Date to datetime and extract features
   Hotel_Reviews["date_object"] = pd.to_datetime(Hotel_Reviews["Review_Date"], format="%m%d%Y %H:%M:%S")
   #Hotel_Reviews["time"] = Hotel_Reviews["date_object"].astype(int) / 10**9  # Convert to Unix timestamp
