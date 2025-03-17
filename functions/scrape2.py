@@ -5,8 +5,6 @@ from langdetect import detect
 from deep_translator import GoogleTranslator
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor
-
-
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import torch
 
@@ -23,9 +21,6 @@ def translate(text, model, tokenizer):
     inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=512).to(device)
     outputs = model.generate(inputs["input_ids"], max_length=512, num_beams=4, early_stopping=True)
     return tokenizer.decode(outputs[0], skip_special_tokens=True)
-
-
-
 
 def load_dataframes(main_folder_path,data_name):
     dataframes = []
