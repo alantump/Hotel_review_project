@@ -7,23 +7,19 @@
 
 *.log
 *.json
-
-First_explorations_alan/Chroma/
-Data/*
-reviews_most_relevant.csv 
-
+*.csv 
 *.png
 
 __pycache__
-Chroma/
 
-*.csv 
-
+Data/* 
 Data/Hotel_Reviews.csv 
 reviews_most_relevant.csv
 First_explorations_bogdan/used_data.txt
 First_explorations_alan/used_data.txt
 used_data.txt
 First_explorations_bogdan/time_series_avg.ipynb
+Chroma/
+First_explorations_alan/Chroma/
 First_explorations_bogdan/chroma_db_reviews/
 First_explorations_bogdan/chroma_db_reviews2/
