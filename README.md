@@ -13,7 +13,7 @@ On the other hand, this also means that people pay too much for hotels whose sco
 
 Here we developed a Streamlit app to better inform consumers what allows them to better judge the quality of the hotel by providing additional information about the ratings and reviews.
 
-It has following features:
+It has the following features:
 
 1. Trend Detector: which identifies hotels that have deteriorating review scores by comparing average ratings with recency weighted averages.
 2. A quantitative and qualitative overview of the hotels.
@@ -34,8 +34,8 @@ The `.gitignore` file has `.env` included, thus it should be save. The api is us
 
 ### Ollama model
 
-llama3 is used to generate embeddings of the reviews and llama3.2 to categorize the reviews into specifc categories.
-Thus, you need to install Ollama on your computer and download this two models.
+llama3 is used to generate embeddings of the reviews and llama3.2 to categorize the reviews into specific categories.
+Thus, you need to install Ollama on your computer and download these two models.
 
 See:
 https://ollama.com/
