@@ -50,7 +50,7 @@ The notebook does following steps:
 3. Categorize reviews into topics
 4. Summarize reviews of each hotel
 5. Create a embedding database for a RAG system
-6. Plotting and saving the rating summaries
+6. Plot and save the rating summaries
 
 ### Streamlit app
 
