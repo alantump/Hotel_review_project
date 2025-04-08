@@ -46,7 +46,7 @@ To gather the data for the app you need to run the notebook: `Scrape_and_analyse
 The notebook does following steps:
 
 1. Scrape the data from booking
-2. Clean the reviews and translate spanish, german, french into english
+2. Clean the reviews and translate Spanish, German, French into English
 3. Categorize reviews into topics
 4. Summarize reviews of each hotel
 5. Create a embedding database for a RAG system
