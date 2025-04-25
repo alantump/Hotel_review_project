@@ -1,9 +1,9 @@
 # Hotel Review Project
 
-Booking.com is one of the largest online travel agencies and one of the top 100 most visited websites in the world. Customers have booked more than one billion (10^9) nights on Booking.com. Improving the booking and hotel selection process has the potential to benefit a large number of customers.
+Booking.com is one of the largest online travel agencies and one of the top 100 most visited websites in the world. Customers have booked more than one billion (10<sup>9</sup>) nights on Booking.com. Improving the booking and hotel selection process has the potential to benefit a large number of customers.
 
 This, or something similar, is what you see when you try to book a hotel on Booking.com.
-The most important information people use when booking a hotel is the room price, followed by the customer rating.
+The most important information people use when booking a hotel is the room price, followed by the customer reviews.
 
 <img src="pics/Booking_page.png" width="60%">.
 
