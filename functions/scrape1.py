@@ -16,7 +16,15 @@ from tqdm import tqdm
 import yaml
 import numpy as pd
 
+# Function to handle NoSuchElementException
 def handle_no_such_element_exception(data_extraction_task):
+    """
+    Safely find an element, returning None if not found
+    
+    :param data_extraction_task: A lambda function that attempts to find an element
+    :return: Element value or None if not found
+    """
+        
     try:
         return data_extraction_task()
     except NoSuchElementException:
@@ -25,7 +33,7 @@ def handle_no_such_element_exception(data_extraction_task):
 
 # Function to get geolocation data
 def get_geolocation(description):
-    geolocator = Nominatim(user_agent="geo_app")
+    geolocator = Nominatim(user_agent="geo_app") # Nominatim geocoder for OpenStreetMap data
     location = geolocator.geocode(f"{description}" , timeout=10)
     print(location)
     if location:
@@ -45,6 +53,9 @@ def find_location(description):
 
 
 def scrape_properties(url, max_button_clicks, data_name, country_short):
+    """Function that scrolls down the page, extract information about its properties and 
+    clicks 'Load More Results' button."""
+    
     # Create a Chrome web driver instance
     driver = webdriver.Chrome(service=Service())
 
@@ -104,22 +115,30 @@ def scrape_properties(url, max_button_clicks, data_name, country_short):
     # Where to store the scraped data
     items = []
 
-    # Select all property items on the page
+    # Select all property items on the page. It finds all elements on the page that have 
+    # the data-testid attribute "property-card"
     property_items = driver.find_elements(By.CSS_SELECTOR, "[data-testid=\"property-card\"]")
 
     print(f"Found {len(property_items)} property items.")
 
     for property_item in property_items:
         # scraping logic...
+        # url: Finds the href attribute of an anchor tag with data-testid "property-card-desktop-single-image"
         url = handle_no_such_element_exception(lambda: property_item.find_element(By.CSS_SELECTOR, "a[data-testid=\"property-card-desktop-single-image\"]").get_attribute("href"))
+        # image: Retrieves the src attribute of an img tag with data-testid "image"
         image = handle_no_such_element_exception(lambda: property_item.find_element(By.CSS_SELECTOR, "img[data-testid=\"image\"]").get_attribute("src"))
+        # Adds a random delay between 1-2 seconds to avoid rapid scraping
         time.sleep(random.uniform(1, 2))
+        # title: Gets the text of an element with data-testid "title"
         title = handle_no_such_element_exception(lambda: property_item.find_element(By.CSS_SELECTOR, "[data-testid=\"title\"]").text)
+        # address: Gets the text of an element with data-testid "address"
         address = handle_no_such_element_exception(lambda: property_item.find_element(By.CSS_SELECTOR, "[data-testid=\"address\"]").text)
+        # distance: Gets the text of an element with data-testid "distance"
         distance = handle_no_such_element_exception(lambda: property_item.find_element(By.CSS_SELECTOR, "[data-testid=\"distance\"]").text)
 
         review_score = None
         review_count = None
+        # review_text: Gets the text of an element with data-testid "review-score"
         review_text = handle_no_such_element_exception(lambda: property_item.find_element(By.CSS_SELECTOR, "[data-testid=\"review-score\"]").text)
         if review_text is not None:
             parts = review_text.split("\n")
