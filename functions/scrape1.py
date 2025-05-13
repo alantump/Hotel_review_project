@@ -191,6 +191,17 @@ def scrape_properties(url, max_button_clicks, data_name, country_short):
 
     driver.quit()
 
+    # The code bellow is extracting unique hotel identifiers from the URLs of the scraped properties. 
+    # The purpose of this code is to create a list of unique hotel identifiers that are later used for:
+    #   1. Adding a "Hotel_key" column to the DataFrame: df["Hotel_key"] = hotel_url_names
+    #   2. Running additional scraping for each individual hotel: 
+    #      for hotel_url_name in tqdm(hotel_url_names, desc="Processing Hotels")
+
+    # This is a common pattern in multi-stage web scraping, where you first gather a list of items 
+    # and then perform deeper scraping on each individual item. The hotel identifiers extracted here 
+    # are used as unique keys to identify each property and to construct URLs for the follow-up 
+    # scraping process.
+
     hotel_url_names = []
 
     for item in items:
